@@ -1,0 +1,166 @@
+@using BlazorMonaco.Editor
+@inject CompletionService CompletionService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<StandaloneCodeEditor @ref="_editor"
+                      Id="code-editor"
+                      CssClass="editor-instance"
+                      ConstructionOptions="EditorConstructionOptions" />
+
+<style>
+    .editor-instance {
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
+@code {
+    private StandaloneCodeEditor? _editor;
+    private DotNetObjectReference<PlaygroundEditor>? _dotNetHelper;
+    private bool _isInitializing;
+    private bool _isInitialized;
+
+    private const string DefaultCode =
+        """
+        // Welcome to the Spectre.Console Playground!
+        // Write your code below and click Run to see it in action.
+
+        // Figlet text with color
+        AnsiConsole.Write(
+            new FigletText("Hello!")
+                .Color(Color.Green));
+
+        AnsiConsole.WriteLine();
+
+        // Interactive text prompt - type your name and press Enter
+        var name = AnsiConsole.Ask<string>("What's your [green]name[/]?");
+        AnsiConsole.MarkupLine($"Nice to meet you, [blue]{name}[/]!");
+
+        AnsiConsole.WriteLine();
+
+        // Confirmation prompt - type y or n
+        var likesCode = AnsiConsole.Confirm("Do you like writing code?");
+
+        AnsiConsole.WriteLine();
+
+        // Show a table with results
+        var table = new Table();
+        table.Border(TableBorder.Rounded);
+        table.AddColumn("[cyan]Property[/]");
+        table.AddColumn("[cyan]Value[/]");
+        table.AddRow("Name", $"[blue]{name}[/]");
+        table.AddRow("Likes Code", likesCode ? "[green]Yes![/]" : "[red]No[/]");
+        AnsiConsole.Write(table);
+
+        AnsiConsole.WriteLine();
+
+        // A rule to finish
+        var rule = new Rule("[green]Thanks for trying Spectre.Console![/]");
+        AnsiConsole.Write(rule);
+
+        """;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "csharp",
+            Theme = "vs-dark",
+            Value = DefaultCode,
+            FontSize = 14,
+            FontFamily = @"""Cascadia Code"", ""Fira Code"", Consolas, monospace",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            ScrollBeyondLastLine = false,
+            RenderLineHighlight = "all",
+            WordWrap = "on",
+            TabSize = 4,
+            InsertSpaces = true
+        };
+    }
+
+    public async Task<string> GetCode()
+    {
+        if (_editor == null)
+            return string.Empty;
+
+        return await _editor.GetValue();
+    }
+
+    public async Task SetCode(string code)
+    {
+        if (_editor != null)
+        {
+            await _editor.SetValue(code);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isInitialized && !_isInitializing)
+        {
+            _isInitializing = true;
+            try
+            {
+                _dotNetHelper = DotNetObjectReference.Create(this);
+
+                // Wait a bit for Monaco to be fully initialized
+                await Task.Delay(500);
+
+                await JSRuntime.InvokeVoidAsync("EditorInterop.initialize", _dotNetHelper);
+                _isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize editor completions: {ex.Message}");
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task<List<CompletionItemData>> GetCompletions(string code, int lineNumber, int column)
+    {
+        try
+        {
+            return await CompletionService.GetCompletionsAsync(code, lineNumber, column);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetCompletions error: {ex.Message}");
+            return [];
+        }
+    }
+
+    [JSInvokable]
+    public async Task<HoverData?> GetHover(string code, int lineNumber, int column)
+    {
+        try
+        {
+            return await CompletionService.GetHoverAsync(code, lineNumber, column);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetHover error: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("EditorInterop.dispose");
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+
+        _dotNetHelper?.Dispose();
+    }
+}
