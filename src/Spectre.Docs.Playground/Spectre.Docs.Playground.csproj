@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <StaticWebAssetBasePath>playground</StaticWebAssetBasePath>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
     <!-- Disable hot reload for the playground since it's embedded in the main site -->
     <BlazorWebAssemblyEnableLinking>true</BlazorWebAssemblyEnableLinking>
     <!-- Disable WebCIL to output regular .dll files that Roslyn can read -->

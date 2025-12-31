@@ -3,6 +3,8 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+.playwright-mcp/
+
 # dotenv files
 .env
 

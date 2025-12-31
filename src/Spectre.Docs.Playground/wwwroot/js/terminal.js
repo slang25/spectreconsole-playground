@@ -184,11 +184,11 @@ window.terminalInterop = {
                             term.open(container);
 
                             // Defer fit to allow layout to stabilize
+                            // Note: We don't use fitAddon.observeResize() because we handle
+                            // resize manually with proper write buffer synchronization
                             setTimeout(() => {
                                 try {
                                     fitAddon.fit();
-                                    // Only observe resize after initial fit is complete
-                                    fitAddon.observeResize();
                                 } catch (e) {
                                     console.warn('FitAddon error:', e);
                                 }
@@ -211,20 +211,85 @@ window.terminalInterop = {
         try {
             const { term, fitAddon } = await createTerminal();
 
-            // Debounced resize handler
+            // Track resize timeout
             let resizeTimeout = null;
-            const debouncedFit = () => {
+
+            // Synchronized resize handler that flushes writes before resizing
+            const safeResize = () => {
                 if (resizeTimeout) clearTimeout(resizeTimeout);
+
+                // Get entry to access state (may not exist yet during init)
+                const entry = this.terminals.get(terminalId);
+
+                // Mark resize as starting - this will pause writes
+                if (entry) entry.isResizing = true;
+
                 resizeTimeout = setTimeout(() => {
                     try {
+                        if (entry) {
+                            // Flush any pending writes before resize
+                            if (entry.writeBuffer) {
+                                try {
+                                    term.write(entry.writeBuffer);
+                                } catch (e) {
+                                    // Ignore errors during flush
+                                }
+                                entry.writeBuffer = '';
+                                entry.writeScheduled = false;
+                            }
+                        }
+
+                        // Now perform the fit
                         fitAddon.fit();
+
+                        // Force a full redraw after resize to fix rendering artifacts
+                        // The garbage characters in new columns are likely uninitialized buffer cells
+                        // or stale rendering data. We try multiple approaches:
+
+                        requestAnimationFrame(() => {
+                            try {
+                                // Approach 1: Use alternate screen buffer trick to force complete redraw
+                                // Switching to alt buffer and back forces the terminal to fully redraw
+                                term.write('\x1b[?1049h\x1b[?1049l');
+
+                                // Approach 2: Multiple refresh passes
+                                term.refresh(0, term.rows - 1);
+
+                                // Approach 3: Try to access and clear renderer internals
+                                if (term._core) {
+                                    // Try to trigger a full render
+                                    if (term._core._renderService) {
+                                        const rs = term._core._renderService;
+                                        if (rs._renderer && rs._renderer.clear) {
+                                            rs._renderer.clear();
+                                        }
+                                        if (rs._fullRefresh) {
+                                            rs._fullRefresh();
+                                        }
+                                    }
+                                    // Final refresh
+                                    term.refresh(0, term.rows - 1);
+                                }
+                            } catch (e) {
+                                // Not critical, ignore errors
+                            }
+                            if (entry) entry.isResizing = false;
+                        });
                     } catch (e) {
                         console.warn('Resize fit error:', e);
+                        if (entry) entry.isResizing = false;
                     }
-                }, 50);
+                }, 100); // Slightly longer debounce to let rapid resizes settle
             };
 
-            window.addEventListener('resize', debouncedFit);
+            // Use ResizeObserver for more reliable container resize detection
+            const resizeObserver = new ResizeObserver(() => {
+                safeResize();
+            });
+            resizeObserver.observe(container);
+
+            // Also handle window resize as fallback
+            window.addEventListener('resize', safeResize);
 
             // Create input processor for this terminal to ensure keystrokes are queued and processed in order
             const inputProcessor = this._createInputProcessor(dotNetRef);
@@ -275,7 +340,18 @@ window.terminalInterop = {
                 });
             });
 
-            this.terminals.set(terminalId, { term, fitAddon, inputProcessor, ready: true });
+            // Create the entry first so resize handler can access it
+            const entry = {
+                term,
+                fitAddon,
+                inputProcessor,
+                ready: true,
+                isResizing: false,
+                writeBuffer: '',
+                writeScheduled: false,
+                resizeObserver
+            };
+            this.terminals.set(terminalId, entry);
             return terminalId;
         } catch (e) {
             console.error('Failed to create terminal:', e);
@@ -290,31 +366,64 @@ window.terminalInterop = {
     write: function (terminalId, text) {
         const entry = this.terminals.get(terminalId);
         if (entry) {
-            try {
-                // Convert standalone \n to \r\n for proper terminal line breaks
-                // First normalize \r\n to \n, then convert all \n to \r\n
-                const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-                entry.term.write(normalizedText);
-            } catch (e) {
-                console.warn('Terminal write error:', e.message);
+            // Convert standalone \n to \r\n for proper terminal line breaks
+            // First normalize \r\n to \n, then convert all \n to \r\n
+            const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+
+            // Add to buffer (will be initialized on entry creation)
+            entry.writeBuffer += normalizedText;
+
+            // Don't schedule writes during resize - the resize handler will flush the buffer
+            if (entry.isResizing) {
+                return;
+            }
+
+            if (!entry.writeScheduled) {
+                entry.writeScheduled = true;
+                requestAnimationFrame(() => {
+                    // Double-check we're not resizing when the frame fires
+                    if (entry.isResizing) {
+                        entry.writeScheduled = false;
+                        return;
+                    }
+
+                    if (entry.writeBuffer) {
+                        try {
+                            entry.term.write(entry.writeBuffer);
+                        } catch (e) {
+                            // Silently ignore "offset is out of bounds" errors from cursor positioning
+                            // These occur when cursor movements reference positions outside terminal bounds
+                            // during resize or rapid updates - the terminal recovers automatically
+                            if (!e.message?.includes('offset is out of bounds')) {
+                                console.warn('Terminal write error:', e.message);
+                            }
+                        }
+                        entry.writeBuffer = '';
+                    }
+                    entry.writeScheduled = false;
+                });
             }
         }
     },
 
     writeLine: function (terminalId, text) {
-        const entry = this.terminals.get(terminalId);
-        if (entry) {
-            try {
-                entry.term.writeln(text);
-            } catch (e) {
-                console.warn('Terminal writeln error (ignored):', e.message);
-            }
-        }
+        // Delegate to write with a newline appended - uses the same batching mechanism
+        this.write(terminalId, text + '\n');
     },
 
     clear: function (terminalId) {
         const entry = this.terminals.get(terminalId);
         if (entry) {
+            // Flush any pending writes before clearing
+            if (entry.writeBuffer) {
+                try {
+                    entry.term.write(entry.writeBuffer);
+                } catch (e) {
+                    // Ignore errors during flush
+                }
+                entry.writeBuffer = '';
+                entry.writeScheduled = false;
+            }
             entry.term.clear();
             entry.term.reset();
         }
@@ -356,6 +465,10 @@ window.terminalInterop = {
     dispose: function (terminalId) {
         const entry = this.terminals.get(terminalId);
         if (entry) {
+            // Clean up the ResizeObserver
+            if (entry.resizeObserver) {
+                entry.resizeObserver.disconnect();
+            }
             entry.term.dispose();
             this.terminals.delete(terminalId);
         }

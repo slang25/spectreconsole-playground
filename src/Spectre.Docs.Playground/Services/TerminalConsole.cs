@@ -142,22 +142,12 @@ public class TerminalConsole : IAnsiConsole
 
         if (style.Foreground != Color.Default)
         {
-            var (r, g, b) = (style.Foreground.R, style.Foreground.G, style.Foreground.B);
-            codes.Add(38);
-            codes.Add(2);
-            codes.Add(r);
-            codes.Add(g);
-            codes.Add(b);
+            AddColorCode(style.Foreground, codes, isForeground: true);
         }
 
         if (style.Background != Color.Default)
         {
-            var (r, g, b) = (style.Background.R, style.Background.G, style.Background.B);
-            codes.Add(48);
-            codes.Add(2);
-            codes.Add(r);
-            codes.Add(g);
-            codes.Add(b);
+            AddColorCode(style.Background, codes, isForeground: false);
         }
 
         if (codes.Count > 0)
@@ -166,6 +156,55 @@ public class TerminalConsole : IAnsiConsole
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Adds the appropriate ANSI color codes for a Spectre.Console color.
+    /// Uses standard ANSI codes (30-37, 90-97) for the 16 standard colors so terminal themes are respected,
+    /// and falls back to TrueColor (24-bit) for custom RGB colors.
+    /// </summary>
+    private static void AddColorCode(Color color, List<int> codes, bool isForeground)
+    {
+        // Try to get the color number using reflection (it's internal in Spectre.Console)
+        var colorNumber = GetColorNumber(color);
+
+        if (colorNumber.HasValue && colorNumber.Value <= 15)
+        {
+            // Standard ANSI color (0-15) - use standard codes so terminal theme is respected
+            var number = colorNumber.Value;
+            if (number < 8)
+            {
+                // Standard colors: 30-37 foreground, 40-47 background
+                codes.Add(isForeground ? 30 + number : 40 + number);
+            }
+            else
+            {
+                // Bright colors: 90-97 foreground, 100-107 background
+                codes.Add(isForeground ? 90 + (number - 8) : 100 + (number - 8));
+            }
+        }
+        else
+        {
+            // Non-standard color - use TrueColor (24-bit)
+            var (r, g, b) = (color.R, color.G, color.B);
+            codes.Add(isForeground ? 38 : 48);
+            codes.Add(2);
+            codes.Add(r);
+            codes.Add(g);
+            codes.Add(b);
+        }
+    }
+
+    // Cache the reflection info for performance
+    private static readonly System.Reflection.PropertyInfo? ColorNumberProperty =
+        typeof(Color).GetProperty("Number", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+    private static byte? GetColorNumber(Color color)
+    {
+        if (ColorNumberProperty == null)
+            return null;
+
+        return ColorNumberProperty.GetValue(color) as byte?;
     }
 
     private class TerminalOutput : IAnsiConsoleOutput
