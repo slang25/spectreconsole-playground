@@ -35,6 +35,9 @@
     private bool _isInitializing;
     private bool _isInitialized;
 
+    [Parameter]
+    public EventCallback OnCtrlCPressed { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_isInitialized && !_isInitializing)
@@ -86,6 +89,12 @@
                 Console.WriteLine($"Warning: Failed to write key '{keyInfo.Key}' to channel (channel may be closed)");
             }
         }
+    }
+
+    [JSInvokable]
+    public async Task OnCtrlC()
+    {
+        await OnCtrlCPressed.InvokeAsync();
     }
 
     private TerminalKeyInfo ParseKeyFromChar(char c)

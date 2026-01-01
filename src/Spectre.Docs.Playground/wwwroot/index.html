@@ -113,7 +113,7 @@
         }
 
         .editor-panel {
-            width: 60%; /* 3:2 ratio with terminal panel */
+            width: 50%;
             min-width: 200px;
             display: flex;
             flex-direction: column;
@@ -154,7 +154,12 @@
         }
 
         .terminal-frame.terminal-focused {
-            box-shadow: 0 0 0 1px rgba(97, 175, 239, 0.5), 0 0 12px rgba(97, 175, 239, 0.3);
+            --tw-outline-style: none;
+            outline-style: none;
+            --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentColor);
+            box-shadow: var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow);
+            --tw-ring-color: color-mix(in oklab, var(--color-primary-500) 50%, transparent);
+            border-color: var(--color-primary-500)
         }
 
         .terminal-dots {

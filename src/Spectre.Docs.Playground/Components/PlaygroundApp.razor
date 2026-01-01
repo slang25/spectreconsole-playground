@@ -58,7 +58,7 @@
                     <div class="terminal-dot terminal-dot-3"></div>
                 </div>
                 <div class="terminal-inner">
-                    <Terminal @ref="_terminal" />
+                    <Terminal @ref="_terminal" OnCtrlCPressed="StopCode" />
                 </div>
             </div>
         </div>
@@ -313,6 +313,7 @@
         try
         {
             await _terminal.Clear();
+            await _terminal.Focus();
 
             var code = await _codeEditor.GetCode();
 

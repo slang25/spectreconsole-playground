@@ -230,6 +230,12 @@ window.terminalInterop = {
 
             // Handle keyboard input - for regular characters only
             term.onData(data => {
+                // Detect Ctrl+C (ETX character, ASCII 0x03)
+                if (data === '\x03') {
+                    dotNetRef.invokeMethodAsync('OnCtrlC');
+                    return;
+                }
+
                 // Skip anything that looks like an escape sequence or control character
                 if (data.startsWith('\x1b') ||
                     data === '\r' || data === '\n' ||
