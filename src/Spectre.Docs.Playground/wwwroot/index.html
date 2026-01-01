@@ -150,6 +150,11 @@
             border: 1px solid var(--terminal-frame-border);
             border-radius: 12px;
             overflow: hidden;
+            transition: box-shadow 0.15s ease-in-out;
+        }
+
+        .terminal-frame.terminal-focused {
+            box-shadow: 0 0 0 1px rgba(97, 175, 239, 0.5), 0 0 12px rgba(97, 175, 239, 0.3);
         }
 
         .terminal-dots {

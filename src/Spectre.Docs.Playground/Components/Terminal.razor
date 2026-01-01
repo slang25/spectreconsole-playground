@@ -1,7 +1,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
 
-<div id="@_containerId" class="terminal-container"></div>
+<div id="@_containerId" class="terminal-container" @onfocusin="OnFocusIn" @onfocusout="OnFocusOut"></div>
 
 <style>
     .terminal-container {
@@ -199,6 +199,22 @@
         if (_terminalId != null)
         {
             await JSRuntime.InvokeVoidAsync("terminalInterop.focus", _terminalId);
+        }
+    }
+
+    private async Task OnFocusIn()
+    {
+        if (_terminalId != null)
+        {
+            await JSRuntime.InvokeVoidAsync("terminalInterop.setFocused", _terminalId, true);
+        }
+    }
+
+    private async Task OnFocusOut()
+    {
+        if (_terminalId != null)
+        {
+            await JSRuntime.InvokeVoidAsync("terminalInterop.setFocused", _terminalId, false);
         }
     }
 

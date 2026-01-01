@@ -147,7 +147,7 @@ window.terminalInterop = {
                 try {
                     const term = new Terminal({
                         cursorBlink: true,
-                        fontSize: 14,
+                        fontSize: 18,
                         fontFamily: '"Cascadia Code", "Fira Code", Consolas, monospace',
                         theme: {
                             // One Dark theme
@@ -184,8 +184,6 @@ window.terminalInterop = {
                             term.open(container);
 
                             // Defer fit to allow layout to stabilize
-                            // Note: We don't use fitAddon.observeResize() because we handle
-                            // resize manually with proper write buffer synchronization
                             setTimeout(() => {
                                 try {
                                     fitAddon.fit();
@@ -211,85 +209,21 @@ window.terminalInterop = {
         try {
             const { term, fitAddon } = await createTerminal();
 
-            // Track resize timeout
-            let resizeTimeout = null;
-
-            // Synchronized resize handler that flushes writes before resizing
-            const safeResize = () => {
-                if (resizeTimeout) clearTimeout(resizeTimeout);
-
-                // Get entry to access state (may not exist yet during init)
-                const entry = this.terminals.get(terminalId);
-
-                // Mark resize as starting - this will pause writes
-                if (entry) entry.isResizing = true;
-
-                resizeTimeout = setTimeout(() => {
-                    try {
-                        if (entry) {
-                            // Flush any pending writes before resize
-                            if (entry.writeBuffer) {
-                                try {
-                                    term.write(entry.writeBuffer);
-                                } catch (e) {
-                                    // Ignore errors during flush
-                                }
-                                entry.writeBuffer = '';
-                                entry.writeScheduled = false;
-                            }
-                        }
-
-                        // Now perform the fit
-                        fitAddon.fit();
-
-                        // Force a full redraw after resize to fix rendering artifacts
-                        // The garbage characters in new columns are likely uninitialized buffer cells
-                        // or stale rendering data. We try multiple approaches:
-
-                        requestAnimationFrame(() => {
-                            try {
-                                // Approach 1: Use alternate screen buffer trick to force complete redraw
-                                // Switching to alt buffer and back forces the terminal to fully redraw
-                                term.write('\x1b[?1049h\x1b[?1049l');
-
-                                // Approach 2: Multiple refresh passes
-                                term.refresh(0, term.rows - 1);
-
-                                // Approach 3: Try to access and clear renderer internals
-                                if (term._core) {
-                                    // Try to trigger a full render
-                                    if (term._core._renderService) {
-                                        const rs = term._core._renderService;
-                                        if (rs._renderer && rs._renderer.clear) {
-                                            rs._renderer.clear();
-                                        }
-                                        if (rs._fullRefresh) {
-                                            rs._fullRefresh();
-                                        }
-                                    }
-                                    // Final refresh
-                                    term.refresh(0, term.rows - 1);
-                                }
-                            } catch (e) {
-                                // Not critical, ignore errors
-                            }
-                            if (entry) entry.isResizing = false;
-                        });
-                    } catch (e) {
-                        console.warn('Resize fit error:', e);
-                        if (entry) entry.isResizing = false;
-                    }
-                }, 100); // Slightly longer debounce to let rapid resizes settle
+            // Simple resize handler - just call fitAddon.fit() directly
+            const handleResize = () => {
+                try {
+                    fitAddon.fit();
+                } catch (e) {
+                    console.warn('Resize fit error:', e);
+                }
             };
 
-            // Use ResizeObserver for more reliable container resize detection
-            const resizeObserver = new ResizeObserver(() => {
-                safeResize();
-            });
+            // Use ResizeObserver for container resize detection
+            const resizeObserver = new ResizeObserver(handleResize);
             resizeObserver.observe(container);
 
             // Also handle window resize as fallback
-            window.addEventListener('resize', safeResize);
+            window.addEventListener('resize', handleResize);
 
             // Create input processor for this terminal to ensure keystrokes are queued and processed in order
             const inputProcessor = this._createInputProcessor(dotNetRef);
@@ -345,8 +279,8 @@ window.terminalInterop = {
                 term,
                 fitAddon,
                 inputProcessor,
+                container,
                 ready: true,
-                isResizing: false,
                 writeBuffer: '',
                 writeScheduled: false,
                 resizeObserver
@@ -373,20 +307,9 @@ window.terminalInterop = {
             // Add to buffer (will be initialized on entry creation)
             entry.writeBuffer += normalizedText;
 
-            // Don't schedule writes during resize - the resize handler will flush the buffer
-            if (entry.isResizing) {
-                return;
-            }
-
             if (!entry.writeScheduled) {
                 entry.writeScheduled = true;
                 requestAnimationFrame(() => {
-                    // Double-check we're not resizing when the frame fires
-                    if (entry.isResizing) {
-                        entry.writeScheduled = false;
-                        return;
-                    }
-
                     if (entry.writeBuffer) {
                         try {
                             entry.term.write(entry.writeBuffer);
@@ -436,10 +359,17 @@ window.terminalInterop = {
         }
     },
 
-    fit: function (terminalId) {
+    setFocused: function (terminalId, focused) {
         const entry = this.terminals.get(terminalId);
-        if (entry) {
-            entry.fitAddon.fit();
+        if (entry && entry.container) {
+            // Find the .terminal-frame ancestor to apply the glow there (outside overflow:hidden)
+            const frame = entry.container.closest('.terminal-frame');
+            const target = frame || entry.container;
+            if (focused) {
+                target.classList.add('terminal-focused');
+            } else {
+                target.classList.remove('terminal-focused');
+            }
         }
     },
 
