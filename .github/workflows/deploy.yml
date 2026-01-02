@@ -1,0 +1,55 @@
+name: Build and Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/Spectre.Docs.Playground/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: src/Spectre.Docs.Playground
+        run: npm ci
+
+      - name: Build Tailwind CSS
+        working-directory: src/Spectre.Docs.Playground
+        run: npm run css:build
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/Spectre.Docs.Playground/Spectre.Docs.Playground.csproj
+
+      - name: Publish Blazor WASM
+        run: dotnet publish src/Spectre.Docs.Playground/Spectre.Docs.Playground.csproj -c Release -o dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist/wwwroot --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME }}
