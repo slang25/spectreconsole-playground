@@ -30,6 +30,7 @@ public class WorkspaceService
         "System.Collections",
         "System.Linq",
         "System.Threading",
+        "System.Threading.Tasks",
         "System.Text.RegularExpressions",
         "System.ComponentModel.Primitives",
         "System.ComponentModel",
