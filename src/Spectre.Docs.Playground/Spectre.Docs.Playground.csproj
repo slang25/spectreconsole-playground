@@ -22,9 +22,11 @@
     <PackageReference Include="Spectre.Console" Version="0.54.1-alpha.0.7" />
   </ItemGroup>
 
-  <!-- Preserve Spectre.Console from trimming for dynamic Roslyn compilation -->
+  <!-- Preserve assemblies from trimming for dynamic Roslyn compilation -->
   <ItemGroup>
     <TrimmerRootAssembly Include="Spectre.Console" />
+    <TrimmerRootAssembly Include="System.Runtime" />
+    <TrimmerRootAssembly Include="System.Private.CoreLib" />
   </ItemGroup>
 
   <ItemGroup>
