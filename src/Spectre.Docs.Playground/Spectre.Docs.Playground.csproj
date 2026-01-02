@@ -24,9 +24,20 @@
 
   <!-- Preserve assemblies from trimming for dynamic Roslyn compilation -->
   <ItemGroup>
-    <TrimmerRootAssembly Include="Spectre.Console" />
-    <TrimmerRootAssembly Include="System.Runtime" />
     <TrimmerRootAssembly Include="System.Private.CoreLib" />
+    <TrimmerRootAssembly Include="System.Runtime" />
+    <TrimmerRootAssembly Include="System.Console" />
+    <TrimmerRootAssembly Include="System.Collections" />
+    <TrimmerRootAssembly Include="System.Linq" />
+    <TrimmerRootAssembly Include="System.Threading" />
+    <TrimmerRootAssembly Include="System.Threading.Tasks" />
+    <TrimmerRootAssembly Include="System.Text.RegularExpressions" />
+    <TrimmerRootAssembly Include="System.ComponentModel.Primitives" />
+    <TrimmerRootAssembly Include="System.ComponentModel" />
+    <TrimmerRootAssembly Include="System.ObjectModel" />
+    <TrimmerRootAssembly Include="System.Runtime.InteropServices" />
+    <TrimmerRootAssembly Include="netstandard" />
+    <TrimmerRootAssembly Include="Spectre.Console" />
   </ItemGroup>
 
   <ItemGroup>
