@@ -62,23 +62,22 @@ public class TerminalBridge
     /// </summary>
     public ConsoleKeyInfo ReadKey()
     {
-        // This blocks the current thread until input is available
-        // Safe to do on background thread with WasmEnableThreads
-        try
+        // Use polling with short sleeps instead of Task.Wait() which can timeout in WASM
+        // This is more compatible with the WASM threading model in cross-origin isolated contexts
+        while (!_cancellationToken.IsCancellationRequested)
         {
-            // Use synchronous read - this will block the background thread
-            var task = _inputChannel.Reader.ReadAsync(_cancellationToken).AsTask();
-            task.Wait(_cancellationToken);
-            return task.Result;
+            if (_inputChannel.Reader.TryRead(out var keyInfo))
+            {
+                return keyInfo;
+            }
+
+            // Short sleep to yield to other work without fully blocking
+            // Thread.Sleep(1) in WASM uses a cooperative yield mechanism
+            Thread.Sleep(1);
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
-        {
-            throw ex.InnerException;
-        }
+
+        _cancellationToken.ThrowIfCancellationRequested();
+        return default; // Unreachable, but satisfies compiler
     }
 
     /// <summary>
