@@ -77,10 +77,7 @@
         foreach (var c in data)
         {
             var keyInfo = ParseKeyFromChar(c);
-            if (!_inputChannel.Writer.TryWrite(keyInfo))
-            {
-                Console.WriteLine($"Warning: Failed to write input '{c}' to channel (channel may be closed)");
-            }
+            _inputChannel.Writer.TryWrite(keyInfo);
         }
     }
 
@@ -91,10 +88,7 @@
         var keyInfo = ParseKeyEvent(keyEvent);
         if (keyInfo != null)
         {
-            if (!_inputChannel.Writer.TryWrite(keyInfo))
-            {
-                Console.WriteLine($"Warning: Failed to write key '{keyInfo.Key}' to channel (channel may be closed)");
-            }
+            _inputChannel.Writer.TryWrite(keyInfo);
         }
     }
 

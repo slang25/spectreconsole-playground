@@ -31,6 +31,8 @@
     <TrimmerRootAssembly Include="System.Linq" />
     <TrimmerRootAssembly Include="System.Threading" />
     <TrimmerRootAssembly Include="System.Threading.Tasks" />
+    <TrimmerRootAssembly Include="System.Threading.Channels" />
+    <TrimmerRootAssembly Include="System.Threading.Thread" />
     <TrimmerRootAssembly Include="System.Text.RegularExpressions" />
     <TrimmerRootAssembly Include="System.ComponentModel.Primitives" />
     <TrimmerRootAssembly Include="System.ComponentModel" />
@@ -50,5 +52,14 @@
       <XmlDocFiles Include="$(NuGetPackageRoot)spectre.console/0.54.1-alpha.0.7/lib/net10.0/Spectre.Console.xml" />
     </ItemGroup>
     <Copy SourceFiles="@(XmlDocFiles)" DestinationFolder="wwwroot/xml" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Copy static web assets manifest to wwwroot for Roslyn assembly resolution -->
+  <Target Name="CopyAssetManifest" AfterTargets="Publish">
+    <Copy
+      SourceFiles="$(PublishDir)$(AssemblyName).staticwebassets.endpoints.json"
+      DestinationFiles="$(PublishDir)wwwroot/_framework/asset-manifest.json"
+      SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied asset manifest to wwwroot/_framework/asset-manifest.json" />
   </Target>
 </Project>

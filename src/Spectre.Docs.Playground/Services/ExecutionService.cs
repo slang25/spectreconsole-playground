@@ -123,18 +123,16 @@ public class ExecutionService
 
     private async Task ProcessOutputAsync(TerminalBridge bridge, Terminal terminal, Task executionTask, CancellationToken cancellationToken)
     {
-        // Read from the output channel and write to terminal
         await foreach (var output in bridge.OutputReader.ReadAllAsync(cancellationToken))
         {
             // Check for special clear marker
             if (output == "\fLEAR\0")
             {
                 await terminal.Clear();
+                continue;
             }
-            else
-            {
-                await terminal.Write(output);
-            }
+
+            await terminal.Write(output);
         }
 
         // Wait for execution to complete
