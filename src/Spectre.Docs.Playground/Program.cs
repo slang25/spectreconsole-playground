@@ -15,5 +15,6 @@ builder.Services.AddSingleton(sp => new WorkspaceService(httpClient));
 builder.Services.AddScoped<CompilationService>();
 builder.Services.AddScoped<CompletionService>();
 builder.Services.AddScoped<ExecutionService>();
+builder.Services.AddScoped<UrlStateService>();
 
 await builder.Build().RunAsync();

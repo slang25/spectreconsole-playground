@@ -1,0 +1,500 @@
+/* Tailwind CSS v4 - Main stylesheet */
+@import "tailwindcss";
+
+/* Scan all Razor and HTML files for utility classes */
+@source "../**/*.razor";
+@source "../wwwroot/**/*.html";
+
+/* Custom theme variables for theming */
+@layer theme {
+  :root {
+    /* Neutral colors (base) */
+    --color-base-50: oklch(98.5% 0 0);
+    --color-base-100: oklch(97% 0 0);
+    --color-base-200: oklch(92.2% 0 0);
+    --color-base-300: oklch(87% 0 0);
+    --color-base-400: oklch(70.8% 0 0);
+    --color-base-500: oklch(55.6% 0 0);
+    --color-base-600: oklch(43.9% 0 0);
+    --color-base-700: oklch(37.1% 0 0);
+    --color-base-800: oklch(26.9% 0 0);
+    --color-base-900: oklch(20.5% 0 0);
+    --color-base-950: oklch(14.5% 0 0);
+    /* Primary colors */
+    --color-primary-400: oklch(0.704 0.191 206.479);
+    --color-primary-500: oklch(0.637 0.237 209.055);
+    --color-primary-600: oklch(0.577 0.245 211.903);
+    --color-primary-700: oklch(0.505 0.213 215.000);
+    /* Tertiary colors */
+    --color-tertiary-one-400: oklch(0.704 0.191 221.479);
+    --color-tertiary-one-600: oklch(0.577 0.245 226.903);
+  }
+
+  /* Light mode (default) */
+  :root {
+    --bg-primary: white;
+    --bg-secondary: var(--color-base-50);
+    --bg-panel-header: var(--color-base-100);
+    --border-color: var(--color-base-200);
+    --text-primary: var(--color-base-900);
+    --text-secondary: var(--color-base-600);
+    --resizer-bg: var(--color-base-300);
+    --resizer-hover: var(--color-primary-600);
+    --btn-secondary-bg: var(--color-base-100);
+    --btn-secondary-border: var(--color-base-200);
+    --btn-secondary-text: var(--color-base-700);
+    --btn-secondary-hover: var(--color-base-200);
+    /* Terminal frame - always dark like homepage */
+    --terminal-frame-bg: rgba(23, 23, 23, 0.8);
+    --terminal-frame-border: rgba(115, 115, 115, 0.5);
+    --terminal-inner-bg: #1e1e1e;
+    --terminal-panel-bg: white;
+    /* Dots - light mode (brighter) */
+    --dot-1-bg: rgba(251, 191, 36, 0.9);
+    --dot-2-bg: rgba(252, 211, 77, 0.9);
+    --dot-3-bg: rgba(253, 230, 138, 0.9);
+    --dot-border: rgba(120, 53, 15, 0.5);
+  }
+
+  /* Dark mode */
+  .dark {
+    --bg-primary: var(--color-base-900);
+    --bg-secondary: var(--color-base-800);
+    --bg-panel-header: var(--color-base-800);
+    --border-color: var(--color-base-800);
+    --text-primary: var(--color-base-100);
+    --text-secondary: var(--color-base-400);
+    --resizer-bg: var(--color-base-600);
+    --btn-secondary-bg: var(--color-base-800);
+    --btn-secondary-border: var(--color-base-700);
+    --btn-secondary-text: var(--color-base-300);
+    --btn-secondary-hover: var(--color-base-700);
+    /* Terminal frame - dark mode */
+    --terminal-frame-bg: var(--color-base-800);
+    --terminal-frame-border: rgba(115, 115, 115, 0.1);
+    --terminal-inner-bg: #1e1e1e;
+    --terminal-panel-bg: var(--color-base-900);
+    /* Dots - dark mode (dimmer) */
+    --dot-1-bg: rgba(180, 83, 9, 0.6);
+    --dot-2-bg: rgba(217, 119, 6, 0.6);
+    --dot-3-bg: rgba(245, 158, 11, 0.6);
+    --dot-border: rgba(217, 119, 6, 1);
+  }
+}
+
+/* Component styles that can't be easily expressed as utilities */
+@layer components {
+  /* ===== Base App Styles ===== */
+  html, body {
+    @apply h-full overflow-x-hidden font-sans;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  #app {
+    @apply h-full flex flex-col;
+  }
+
+  /* ===== Playground Layout ===== */
+  .playground-container {
+    @apply flex h-full overflow-hidden;
+    background: var(--bg-primary);
+  }
+
+  .editor-panel {
+    @apply w-1/2 min-w-[200px] flex flex-col;
+  }
+
+  .resizer {
+    @apply w-[6px] cursor-col-resize shrink-0 transition-colors duration-150;
+    background: var(--resizer-bg);
+  }
+
+  .resizer:hover,
+  .resizer.resizing {
+    background: var(--resizer-hover);
+  }
+
+  .terminal-panel {
+    @apply flex-1 min-w-[200px] flex flex-col;
+    background: var(--terminal-panel-bg);
+  }
+
+  /* ===== Terminal Frame ===== */
+  .terminal-frame {
+    @apply flex flex-col flex-1 m-2 p-1 rounded-xl overflow-hidden transition-shadow duration-150;
+    background: var(--terminal-frame-bg);
+    border: 1px solid var(--terminal-frame-border);
+  }
+
+  .terminal-frame.terminal-focused {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
+  }
+
+  .terminal-dots {
+    @apply flex justify-end gap-2 px-3 py-2;
+  }
+
+  .terminal-dot {
+    @apply w-[10px] h-[10px] rounded-[3px];
+    border: 1px solid var(--dot-border);
+  }
+
+  .terminal-dot-1 {
+    background: var(--dot-1-bg);
+  }
+
+  .terminal-dot-2 {
+    background: var(--dot-2-bg);
+  }
+
+  .terminal-dot-3 {
+    background: var(--dot-3-bg);
+  }
+
+  .terminal-inner {
+    @apply flex-1 mx-2 mb-2 rounded-lg overflow-hidden;
+    background: var(--terminal-inner-bg);
+  }
+
+  /* ===== Panel Header ===== */
+  .panel-header {
+    @apply flex items-center justify-between px-4 py-2 text-[13px];
+    background: var(--bg-panel-header);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  .panel-content {
+    @apply flex-1 overflow-hidden;
+  }
+
+  /* ===== Buttons ===== */
+  .run-button {
+    @apply flex items-center gap-[6px] px-4 py-[6px] rounded-[3px] text-[13px] text-white cursor-pointer border-none;
+    background: #0e639c;
+  }
+
+  .run-button:hover {
+    background: #1177bb;
+  }
+
+  .run-button:disabled {
+    @apply cursor-not-allowed;
+    background: #555;
+  }
+
+  .clear-button {
+    @apply px-3 py-[6px] rounded-[3px] text-[13px] cursor-pointer;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    border: 1px solid var(--btn-secondary-border);
+  }
+
+  .clear-button:hover {
+    background: var(--btn-secondary-hover);
+  }
+
+  .stop-button {
+    @apply flex items-center gap-[6px] px-3 py-[6px] rounded-[3px] text-[13px] text-white cursor-pointer border-none;
+    background: #a11;
+  }
+
+  .stop-button:hover {
+    background: #c22;
+  }
+
+  .terminal-header-buttons {
+    @apply flex gap-2 items-center;
+  }
+
+  /* ===== Loading Overlay ===== */
+  .loading-overlay {
+    @apply fixed inset-0 flex flex-col items-center justify-center z-[1000] text-white;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .loading-spinner {
+    @apply w-10 h-10 rounded-full mb-4 animate-spin;
+    border: 3px solid #333;
+    border-top-color: #0e639c;
+  }
+
+  /* ===== Error Panel ===== */
+  .error-panel {
+    @apply p-3 m-2 rounded font-mono text-xs max-h-[150px] overflow-y-auto;
+    background: #5a1d1d;
+    border: 1px solid #be1100;
+    color: #f48771;
+  }
+
+  /* ===== Editor Header ===== */
+  .editor-header-left {
+    @apply flex items-center gap-3;
+  }
+
+  .examples-select {
+    @apply px-2 py-[5px] rounded-[3px] text-[13px] cursor-pointer outline-none;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    border: 1px solid var(--btn-secondary-border);
+  }
+
+  .examples-select:hover {
+    background: var(--btn-secondary-hover);
+  }
+
+  .examples-select:focus {
+    border-color: #0e639c;
+  }
+
+  /* ===== Site Header ===== */
+  .site-header {
+    @apply sticky top-0 h-16 z-50 w-full;
+    border-bottom: 1px solid var(--color-base-200);
+    background: color-mix(in oklab, white 95%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  @supports (backdrop-filter: blur(8px)) {
+    .site-header {
+      background: color-mix(in oklab, white 60%, transparent);
+    }
+  }
+
+  .dark .site-header {
+    border-bottom-color: var(--color-base-800);
+    background: color-mix(in oklab, var(--color-base-900) 95%, transparent);
+  }
+
+  @supports (backdrop-filter: blur(8px)) {
+    .dark .site-header {
+      background: color-mix(in oklab, var(--color-base-900) 60%, transparent);
+    }
+  }
+
+  .header-container {
+    @apply w-full max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .header-content {
+    @apply flex items-center justify-between h-16;
+  }
+
+  .header-left {
+    @apply flex items-center gap-3;
+  }
+
+  .logo-link {
+    @apply flex items-center no-underline;
+  }
+
+  .logo-svg {
+    @apply w-10 h-10 mr-3 hidden md:block shrink-0;
+    fill: var(--color-primary-700);
+  }
+
+  .dark .logo-svg {
+    fill: var(--color-primary-500);
+    opacity: 0.9;
+  }
+
+  .logo-text {
+    @apply text-xl lg:text-2xl font-bold;
+    background: linear-gradient(to right, var(--color-primary-600), var(--color-tertiary-one-600));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .dark .logo-text {
+    background: linear-gradient(to right, var(--color-primary-400), var(--color-tertiary-one-400));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ===== Playground Badge (Retro Style) ===== */
+  .playground-badge {
+    @apply text-sm font-bold px-3 py-1 rounded-sm uppercase tracking-wider transition-all duration-150;
+    background: #fbbf24;
+    color: #1f2937;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    box-shadow:
+      inset -2px -2px 0 0 #b45309,
+      inset 2px 2px 0 0 #fde68a,
+      4px 4px 0 0 #1f2937;
+    border: 2px solid #1f2937;
+  }
+
+  .playground-badge:hover {
+    transform: translate(2px, 2px);
+    box-shadow:
+      inset -2px -2px 0 0 #b45309,
+      inset 2px 2px 0 0 #fde68a,
+      0px 0px 0 0 #1f2937;
+  }
+
+  .dark .playground-badge {
+    background: #facc15;
+    border-color: #fef3c7;
+    box-shadow:
+      inset -2px -2px 0 0 #a16207,
+      inset 2px 2px 0 0 #fef08a,
+      4px 4px 0 0 #fef3c7;
+    color: #1f2937;
+  }
+
+  .dark .playground-badge:hover {
+    box-shadow:
+      inset -2px -2px 0 0 #a16207,
+      inset 2px 2px 0 0 #fef08a,
+      0px 0px 0 0 #fef3c7;
+  }
+
+  /* ===== Desktop Navigation ===== */
+  .nav-desktop {
+    @apply hidden md:flex items-center gap-1 text-xs lg:text-sm font-medium;
+  }
+
+  .nav-link {
+    @apply px-2 lg:px-3 py-2 rounded-md no-underline transition-all duration-150;
+    color: var(--text-secondary);
+  }
+
+  .nav-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-panel-header);
+  }
+
+  .nav-link.active {
+    color: var(--text-primary);
+    background: var(--bg-panel-header);
+  }
+
+  .header-right {
+    @apply flex items-center gap-4;
+  }
+
+  .icon-button {
+    @apply flex items-center justify-center p-2 rounded-md border-none bg-transparent cursor-pointer transition-colors duration-150;
+    color: var(--color-base-600);
+  }
+
+  .dark .icon-button {
+    color: var(--color-base-400);
+  }
+
+  .icon-button:hover {
+    color: var(--text-primary);
+    background: var(--color-base-100);
+  }
+
+  .dark .icon-button:hover {
+    background: var(--color-base-800);
+  }
+
+  .icon-button svg {
+    @apply w-5 h-5;
+  }
+
+  .menu-icon {
+    @apply w-4 h-4;
+  }
+
+  /* Theme toggle icons */
+  .icon-sun {
+    @apply hidden;
+  }
+
+  .icon-moon {
+    @apply block;
+  }
+
+  .dark .icon-sun {
+    @apply block;
+  }
+
+  .dark .icon-moon {
+    @apply hidden;
+  }
+
+  /* Mobile menu button */
+  .mobile-only {
+    @apply block md:hidden;
+  }
+
+  /* ===== Mobile Navigation ===== */
+  .nav-mobile {
+    @apply hidden shadow-md;
+    background: var(--bg-panel-header);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .nav-mobile.open {
+    @apply block;
+  }
+
+  @media (min-width: 768px) {
+    .nav-mobile {
+      display: none !important;
+    }
+  }
+
+  .nav-mobile-links {
+    @apply p-2;
+  }
+
+  .nav-mobile-link {
+    @apply block px-3 py-2 rounded-md text-base font-medium no-underline transition-all duration-150;
+    color: var(--text-secondary);
+  }
+
+  .nav-mobile-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+
+  .nav-mobile-link.active {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+
+  /* ===== App Wrapper ===== */
+  .app-wrapper {
+    @apply flex flex-col h-screen;
+  }
+
+  .main-content {
+    @apply flex-1 overflow-hidden;
+  }
+
+  /* ===== Terminal xterm styles ===== */
+  .terminal-container .xterm {
+    height: 100%;
+  }
+
+  .terminal-container .xterm-viewport {
+    overflow-y: auto !important;
+  }
+
+  /* Hide the native text caret in Firefox for ghostty-web */
+  .terminal-container,
+  .terminal-container * {
+    caret-color: transparent !important;
+  }
+
+  /* Mobile menu open state */
+  .nav-mobile-open {
+    display: block;
+  }
+}
+
+/* Utility layer for custom utilities */
+@utility none {
+  display: none;
+}

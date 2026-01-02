@@ -1,11 +1,8 @@
-@inject NavigationManager NavigationManager
-
 <header class="site-header">
     <div class="header-container">
         <div class="header-content">
-            <!-- Left side - Logo -->
+            <!-- Left side - Logo with Playground badge -->
             <div class="header-left">
-                <!-- Logo and Title -->
                 <a href="/" class="logo-link">
                     <svg xmlns="http://www.w3.org/2000/svg" class="logo-svg" viewBox="0 0 1270.000000 1270.000000" preserveAspectRatio="xMidYMid meet">
                         <g transform="translate(0.000000,1270.000000) scale(0.100000,-0.100000)">
@@ -69,17 +66,8 @@
                     </svg>
                     <span class="logo-text">Spectre.Console</span>
                 </a>
+                <span class="playground-badge">Playground</span>
             </div>
-
-            <!-- Navigation -->
-            <nav class="nav-desktop">
-                <a href="/" class="nav-link @(CurrentSection == "" ? "active" : "")">Home</a>
-                <a href="/console" class="nav-link @(CurrentSection == "Console" ? "active" : "")">Console</a>
-                <a href="/playground" class="nav-link @(CurrentSection == "Playground" ? "active" : "")">Playground</a>
-                <a href="/cli" class="nav-link @(CurrentSection == "Cli" ? "active" : "")">CLI</a>
-                <a href="/blog" class="nav-link @(CurrentSection == "Blog" ? "active" : "")">Blog</a>
-                <a href="https://github.com/spectreconsole" class="nav-link" target="_blank" rel="noopener">GitHub</a>
-            </nav>
 
             <!-- Right side actions -->
             <div class="header-right">
@@ -94,48 +82,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
                 </button>
-
-                <!-- Mobile menu button -->
-                <button id="mobile-menu-button" class="icon-button mobile-only" aria-label="Toggle menu">
-                    <svg viewBox="0 0 16 16" fill="currentColor" class="menu-icon">
-                        <path d="M8 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM8 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM9.5 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z"></path>
-                    </svg>
-                </button>
             </div>
         </div>
     </div>
-
-    <!-- Mobile Navigation -->
-    <nav id="mobile-menu" class="nav-mobile">
-        <div class="nav-mobile-links">
-            <a href="/" class="nav-mobile-link @(CurrentSection == "" ? "active" : "")">Home</a>
-            <a href="/console" class="nav-mobile-link @(CurrentSection == "Console" ? "active" : "")">Console</a>
-            <a href="/playground" class="nav-mobile-link @(CurrentSection == "Playground" ? "active" : "")">Playground</a>
-            <a href="/cli" class="nav-mobile-link @(CurrentSection == "Cli" ? "active" : "")">CLI</a>
-            <a href="/blog" class="nav-mobile-link @(CurrentSection == "Blog" ? "active" : "")">Blog</a>
-        </div>
-    </nav>
 </header>
 
 @code {
     [Parameter] public string CurrentSection { get; set; } = "Playground";
-
-    protected override void OnInitialized()
-    {
-        if (string.IsNullOrEmpty(CurrentSection))
-        {
-            var currentPath = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath;
-
-            if (currentPath.StartsWith("/console", StringComparison.OrdinalIgnoreCase))
-                CurrentSection = "Console";
-            else if (currentPath.StartsWith("/cli", StringComparison.OrdinalIgnoreCase))
-                CurrentSection = "Cli";
-            else if (currentPath.StartsWith("/blog", StringComparison.OrdinalIgnoreCase))
-                CurrentSection = "Blog";
-            else if (currentPath.StartsWith("/playground", StringComparison.OrdinalIgnoreCase))
-                CurrentSection = "Playground";
-            else
-                CurrentSection = "";
-        }
-    }
 }

@@ -1,5 +1,6 @@
 @inject CompilationService CompilationService
 @inject ExecutionService ExecutionService
+@inject UrlStateService UrlStateService
 
 <div class="playground-container">
     <div class="editor-panel">
@@ -43,7 +44,7 @@
         <div class="panel-header">
             <span>Terminal Output</span>
             <div class="terminal-header-buttons">
-                @if (_isRunning)
+@if (_isRunning)
                 {
                     <button class="stop-button" @onclick="StopCode">Stop</button>
                 }
@@ -71,6 +72,7 @@
     private bool _isRunning;
     private List<string> _compilationErrors = [];
     private CancellationTokenSource? _executionCts;
+    private bool _hasPlayedWelcome;
 
     private static readonly Dictionary<string, string> Examples = new()
     {
@@ -289,6 +291,127 @@
             """
     };
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Try to load code from URL hash
+            var codeFromUrl = await UrlStateService.GetCodeFromUrlAsync();
+            if (!string.IsNullOrEmpty(codeFromUrl) && _codeEditor != null)
+            {
+                // Wait for editor to be fully initialized
+                while (!_codeEditor.IsInitialized)
+                {
+                    await Task.Delay(50);
+                }
+                await _codeEditor.SetCode(codeFromUrl);
+
+                // Skip welcome animation when loading shared code
+                _hasPlayedWelcome = true;
+            }
+
+            if (!_hasPlayedWelcome && _terminal != null)
+            {
+                _hasPlayedWelcome = true;
+                await Task.Delay(300);
+                await PlayWelcomeAnimation();
+            }
+        }
+    }
+
+    private async Task PlayWelcomeAnimation()
+    {
+        if (_terminal == null) return;
+
+        var (cols, rows) = await _terminal.GetSize();
+        var width = cols - 1;
+        var height = rows - 1;
+
+        await _terminal.Write("\x1b[?25l\x1b[H");
+
+        // Calculate center for "Welcome"
+        var welcomeText = "Welcome";
+        var centerRow = height / 2 + 1;
+        var centerCol = (width - welcomeText.Length) / 2 + 1;
+        var welcomeIndex = 0;
+
+        // Total perimeter steps for even distribution of welcome letters
+        var perimeterLength = (width * 2) + (height * 2);
+        var welcomeInterval = perimeterLength / (welcomeText.Length + 1);
+        var stepCount = 0;
+
+        // Top border
+        await _terminal.Write($"\x1b[38;5;244m╭");
+        for (int i = 0; i < width - 1; i++)
+        {
+            await _terminal.Write("─");
+            stepCount++;
+            if (welcomeIndex < welcomeText.Length && stepCount % welcomeInterval == 0)
+            {
+                await _terminal.Write($"\x1b[{centerRow};{centerCol + welcomeIndex}H\x1b[33;1m{welcomeText[welcomeIndex]}\x1b[0m");
+                await _terminal.Write($"\x1b[1;{i + 3}H");
+                welcomeIndex++;
+            }
+            if (i % 6 == 0) await Task.Delay(8);
+        }
+        await _terminal.Write("╮\x1b[0m");
+
+        // Right side
+        for (int i = 2; i <= height; i++)
+        {
+            await _terminal.Write($"\x1b[{i};{width + 1}H\x1b[38;5;244m│\x1b[0m");
+            stepCount++;
+            if (welcomeIndex < welcomeText.Length && stepCount % welcomeInterval == 0)
+            {
+                await _terminal.Write($"\x1b[{centerRow};{centerCol + welcomeIndex}H\x1b[33;1m{welcomeText[welcomeIndex]}\x1b[0m");
+                welcomeIndex++;
+            }
+            if (i % 2 == 0) await Task.Delay(12);
+        }
+
+        // Bottom border
+        await _terminal.Write($"\x1b[{height + 1};{width + 1}H\x1b[38;5;244m╯");
+        for (int i = width - 1; i >= 1; i--)
+        {
+            await _terminal.Write($"\x1b[{height + 1};{i + 1}H─");
+            stepCount++;
+            if (welcomeIndex < welcomeText.Length && stepCount % welcomeInterval == 0)
+            {
+                await _terminal.Write($"\x1b[{centerRow};{centerCol + welcomeIndex}H\x1b[33;1m{welcomeText[welcomeIndex]}\x1b[0m");
+                await _terminal.Write($"\x1b[{height + 1};{i}H");
+                welcomeIndex++;
+            }
+            if (i % 6 == 0) await Task.Delay(8);
+        }
+        await _terminal.Write($"\x1b[{height + 1};1H╰\x1b[0m");
+
+        // Left side
+        for (int i = height; i >= 2; i--)
+        {
+            await _terminal.Write($"\x1b[{i};1H\x1b[38;5;244m│\x1b[0m");
+            stepCount++;
+            if (welcomeIndex < welcomeText.Length && stepCount % welcomeInterval == 0)
+            {
+                await _terminal.Write($"\x1b[{centerRow};{centerCol + welcomeIndex}H\x1b[33;1m{welcomeText[welcomeIndex]}\x1b[0m");
+                welcomeIndex++;
+            }
+            if (i % 2 == 0) await Task.Delay(12);
+        }
+
+        // Show any remaining letters
+        while (welcomeIndex < welcomeText.Length)
+        {
+            await _terminal.Write($"\x1b[{centerRow};{centerCol + welcomeIndex}H\x1b[33;1m{welcomeText[welcomeIndex]}\x1b[0m");
+            welcomeIndex++;
+            await Task.Delay(40);
+        }
+
+        await Task.Delay(500);
+
+        // Clear and show cursor
+        await _terminal.Write("\x1b[2J\x1b[H\x1b[?25h");
+    }
+
     private async Task OnExampleSelected(ChangeEventArgs e)
     {
         var selectedKey = e.Value?.ToString();
@@ -316,6 +439,9 @@
             await _terminal.Focus();
 
             var code = await _codeEditor.GetCode();
+
+            // Update URL with compressed code for sharing
+            await UrlStateService.UpdateUrlAsync(code);
 
             // Compile the code
             var compilationResult = await CompilationService.CompileAsync(code);

@@ -24,6 +24,13 @@
     .terminal-container * {
         caret-color: transparent !important;
     }
+
+    /* Hollow block cursor when terminal is unfocused */
+    .terminal-container.cursor-inactive .xterm-cursor-block {
+        background-color: transparent !important;
+        outline: 1px solid #d4d4d4 !important;
+        outline-offset: -1px;
+    }
 </style>
 
 @code {
