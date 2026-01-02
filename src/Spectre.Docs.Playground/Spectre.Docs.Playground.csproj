@@ -22,6 +22,11 @@
     <PackageReference Include="Spectre.Console" Version="0.54.1-alpha.0.7" />
   </ItemGroup>
 
+  <!-- Preserve Spectre.Console from trimming for dynamic Roslyn compilation -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Spectre.Console" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
