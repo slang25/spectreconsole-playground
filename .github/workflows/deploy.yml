@@ -47,6 +47,9 @@ jobs:
       - name: Publish Blazor WASM
         run: dotnet publish src/Spectre.Docs.Playground/Spectre.Docs.Playground.csproj -c Release -o dist
 
+      - name: Copy asset mappings for runtime resolution
+        run: cp dist/Spectre.Docs.Playground.staticwebassets.endpoints.json dist/wwwroot/_framework/asset-manifest.json
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

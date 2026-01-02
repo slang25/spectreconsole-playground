@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -18,6 +19,7 @@ public class WorkspaceService
     private bool _referencesLoaded;
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private AdhocWorkspace? _workspace;
+    private Dictionary<string, string>? _assetMappings;
 
     // Core assemblies needed for compilation and completion
     private static readonly string[] RequiredAssemblies =
@@ -81,6 +83,9 @@ public class WorkspaceService
         {
             if (_referencesLoaded)
                 return;
+
+            // Load asset mappings for fingerprinted file resolution
+            await LoadAssetMappingsAsync();
 
             // Load assembly references
             foreach (var assemblyName in RequiredAssemblies)
@@ -198,15 +203,101 @@ public class WorkspaceService
         return position;
     }
 
+    private async Task LoadAssetMappingsAsync()
+    {
+        if (_assetMappings != null)
+            return;
+
+        _assetMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            // Try to load the asset manifest (copied during CI build)
+            var response = await _httpClient.GetAsync("_framework/asset-manifest.json");
+            if (!response.IsSuccessStatusCode)
+            {
+                System.Console.WriteLine("Asset manifest not found, falling back to direct paths");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            if (!doc.RootElement.TryGetProperty("Endpoints", out var endpoints))
+                return;
+
+            foreach (var endpoint in endpoints.EnumerateArray())
+            {
+                if (!endpoint.TryGetProperty("Route", out var routeEl) ||
+                    !endpoint.TryGetProperty("AssetFile", out var assetEl))
+                    continue;
+
+                var route = routeEl.GetString();
+                var assetFile = assetEl.GetString();
+
+                if (string.IsNullOrEmpty(route) || string.IsNullOrEmpty(assetFile))
+                    continue;
+
+                // We want to map virtual paths (like _framework/System.Runtime.dll)
+                // to their actual fingerprinted files (like _framework/System.Runtime.x76wsktuli.dll)
+                // Only add mappings where Route is non-fingerprinted and AssetFile is the actual fingerprinted file
+                if (!route.EndsWith(".dll") || !assetFile.EndsWith(".dll"))
+                    continue;
+
+                // Skip compressed versions
+                if (assetFile.Contains(".dll.br") || assetFile.Contains(".dll.gz"))
+                    continue;
+
+                // Check if route is non-fingerprinted (filename has no dot before .dll)
+                // e.g., "_framework/System.Runtime.dll" vs "_framework/System.Runtime.x76wsktuli.dll"
+                var routeFileName = route[(route.LastIndexOf('/') + 1)..];
+                var dllIndex = routeFileName.LastIndexOf(".dll", StringComparison.Ordinal);
+                var baseFileName = routeFileName[..dllIndex];
+
+                // Non-fingerprinted files have names like "System.Runtime" (dots for namespaces)
+                // Fingerprinted files have an extra segment like "System.Runtime.x76wsktuli"
+                // We identify fingerprinted by checking if the last segment looks like a hash
+                var lastDot = baseFileName.LastIndexOf('.');
+                if (lastDot > 0)
+                {
+                    var lastSegment = baseFileName[(lastDot + 1)..];
+                    // If last segment is all lowercase alphanumeric and 8-12 chars, it's likely a fingerprint
+                    var isFingerprint = lastSegment.Length >= 8 && lastSegment.Length <= 12 &&
+                                       lastSegment.All(c => char.IsLetterOrDigit(c) && char.IsLower(c));
+                    if (isFingerprint)
+                        continue; // Route is already fingerprinted, skip
+                }
+
+                // This route is non-fingerprinted, map it to the asset file
+                _assetMappings[route] = assetFile;
+            }
+
+            System.Console.WriteLine($"Loaded {_assetMappings.Count} asset mappings");
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to load asset mappings: {ex.Message}");
+        }
+    }
+
     private async Task<byte[]?> TryLoadAssemblyBytesAsync(string assemblyName)
     {
-        // Try to load assembly by name - server will resolve fingerprinted filename
-        // Try .dll first (WebCIL disabled), then .wasm as fallback
-        var patterns = new[]
+        // Build the virtual path
+        var virtualPath = $"_framework/{assemblyName}.dll";
+
+        // Check if we have a mapping to a fingerprinted file
+        string actualPath;
+        if (_assetMappings != null && _assetMappings.TryGetValue(virtualPath, out var mappedPath))
         {
-            $"_framework/{assemblyName}.dll",
-            $"_framework/{assemblyName}.wasm",
-        };
+            actualPath = mappedPath;
+        }
+        else
+        {
+            actualPath = virtualPath;
+        }
+
+        // Try to load the assembly
+        var patterns = new[] { actualPath, $"_framework/{assemblyName}.wasm" };
 
         foreach (var pattern in patterns)
         {
