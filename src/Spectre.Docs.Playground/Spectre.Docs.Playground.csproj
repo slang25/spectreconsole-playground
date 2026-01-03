@@ -54,6 +54,21 @@
     <Copy SourceFiles="@(XmlDocFiles)" DestinationFolder="wwwroot/xml" SkipUnchangedFiles="true" />
   </Target>
 
+  <Target Name="GetFrameworkXmlDocumentation" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <OutputDocuments Include="@(Reference->'%(RootDir)%(Directory)%(Filename).xml')" Condition="Exists('%(RootDir)%(Directory)%(Filename).xml')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyDocumentationsToOutputDirectory" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="GetFrameworkXmlDocumentation">
+    <Copy SourceFiles="@(OutputDocuments)" DestinationFolder="$(OutputPath)wwwroot/xml" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyDocumentationsToPublishDirectory" AfterTargets="CopyFilesToPublishDirectory" DependsOnTargets="GetFrameworkXmlDocumentation">
+    <Copy SourceFiles="@(OutputDocuments)" DestinationFolder="$(PublishDir)wwwroot/xml" SkipUnchangedFiles="true" />
+  </Target>
+
+
   <!-- Copy static web assets manifest to wwwroot for Roslyn assembly resolution -->
   <Target Name="CopyAssetManifest" AfterTargets="Publish">
     <Copy
@@ -61,5 +76,16 @@
       DestinationFiles="$(PublishDir)wwwroot/_framework/asset-manifest.json"
       SkipUnchangedFiles="true" />
     <Message Importance="high" Text="Copied asset manifest to wwwroot/_framework/asset-manifest.json" />
+  </Target>
+
+  <!-- Patch dotnet.js to fix threading bug in published builds -->
+  <!-- The published build sets debugLevel:0 which causes JSSynchronizationContext to stop working after ~10 JS interop calls -->
+  <!-- Setting debugLevel:-1 (like Debug builds) fixes this. This appears to be a .NET 10 WASM threading bug. -->
+  <Target Name="PatchDotnetJs" AfterTargets="Publish">
+    <PropertyGroup>
+      <DotnetJsPath>$(PublishDir)wwwroot/_framework/dotnet.js</DotnetJsPath>
+    </PropertyGroup>
+    <Exec Command="sed -i '' 's/&quot;debugLevel&quot;: 0/&quot;debugLevel&quot;: -1/g' &quot;$(DotnetJsPath)&quot;" />
+    <Message Importance="high" Text="Patched dotnet.js debugLevel from 0 to -1 to fix WASM threading bug" />
   </Target>
 </Project>

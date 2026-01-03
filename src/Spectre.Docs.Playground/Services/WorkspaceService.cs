@@ -40,14 +40,23 @@ public class WorkspaceService
         "Spectre.Console"
     ];
 
-    // Spectre.Console packages that have XML documentation available
-    // This mirrors the _packages list in XmlDocumentationService
     private static readonly Dictionary<string, string> SpectrePackageXmlFiles = new()
     {
         ["Spectre.Console"] = "Spectre.Console.xml",
         ["Spectre.Console.Json"] = "Spectre.Console.Json.xml",
         ["Spectre.Console.ImageSharp"] = "Spectre.Console.ImageSharp.xml",
-        ["Spectre.Console.Cli"] = "Spectre.Console.Cli.xml"
+        ["Spectre.Console.Cli"] = "Spectre.Console.Cli.xml",
+        ["System.Runtime"] = "System.Runtime.xml",
+        ["System.Runtime.InteropServices"] = "System.Runtime.InteropServices.xml",
+        ["System.Console"] = "System.Console.xml",
+        ["System.Collections"] = "System.Collections.xml",
+        ["System.Linq"] = "System.Linq.xml",
+        ["System.Threading"] = "System.Threading.xml",
+        ["System.Threading.Tasks"] = "System.Threading.Tasks.xml",
+        ["System.Text.RegularExpressions"] = "System.Text.RegularExpressions.xml",
+        ["System.ComponentModel.Primitives"] = "System.ComponentModel.Primitives.xml",
+        ["System.ComponentModel"] = "System.ComponentModel.xml",
+        ["System.ObjectModel"] = "System.ObjectModel.xml",
     };
 
     // Global usings included as a separate document in the compilation
