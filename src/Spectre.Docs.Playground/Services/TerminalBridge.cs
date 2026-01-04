@@ -6,7 +6,7 @@ namespace Spectre.Docs.Playground.Services;
 /// Thread-safe bridge for terminal I/O that allows background threads to communicate
 /// with the main thread (which has JS interop access).
 /// </summary>
-public class TerminalBridge
+public class TerminalBridge : ITerminalBridge
 {
     private readonly Channel<string> _outputChannel;
     private readonly Channel<ConsoleKeyInfo> _inputChannel;

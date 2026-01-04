@@ -1,3 +1,4 @@
+@using Spectre.Docs.Playground.Services
 @inject CompilationService CompilationService
 @inject ExecutionService ExecutionService
 @inject UrlStateService UrlStateService
@@ -59,7 +60,7 @@
                     <div class="terminal-dot terminal-dot-3"></div>
                 </div>
                 <div class="terminal-inner">
-                    <Terminal @ref="_terminal" OnCtrlCPressed="StopCode" />
+                    <SharedTerminal @ref="_terminal" OnCtrlCPressed="StopCode" />
                 </div>
             </div>
         </div>
@@ -68,10 +69,10 @@
 
 @code {
     private PlaygroundEditor? _codeEditor;
-    private Terminal? _terminal;
+    private SharedTerminal? _terminal;
+    private SharedTerminalIO? _terminalIO;
     private bool _isRunning;
     private List<string> _compilationErrors = [];
-    private CancellationTokenSource? _executionCts;
     private bool _hasPlayedWelcome;
 
     private static readonly Dictionary<string, string> Examples = new()
@@ -314,6 +315,9 @@
             {
                 _hasPlayedWelcome = true;
                 await Task.Delay(300);
+
+                // Initialize terminal for the welcome animation
+                _terminalIO = await _terminal.InitializeAsync();
                 await PlayWelcomeAnimation();
             }
         }
@@ -435,6 +439,12 @@
 
         try
         {
+            // Initialize SharedTerminalIO if needed (this starts the terminal)
+            _terminalIO ??= await _terminal.InitializeAsync();
+
+            // Reset the terminal IO for a fresh execution (creates new CancellationTokenSource)
+            _terminalIO.Reset();
+
             await _terminal.Clear();
             await _terminal.Focus();
 
@@ -455,12 +465,16 @@
                 return;
             }
 
-            // Execute the compiled assembly
-            _executionCts = new CancellationTokenSource();
+            // Get terminal size
+            var (cols, rows) = await _terminal.GetSize();
+
+            // Execute the compiled assembly using SharedTerminalIO
+            // Cancellation is handled by SharedTerminalIO (Stop button or Ctrl+C)
             await ExecutionService.ExecuteAsync(
                 compilationResult.Assembly!,
-                _terminal,
-                _executionCts.Token);
+                _terminalIO,
+                cols,
+                rows);
         }
         catch (Exception ex)
         {
@@ -469,8 +483,6 @@
         finally
         {
             _isRunning = false;
-            _executionCts?.Dispose();
-            _executionCts = null;
             StateHasChanged();
         }
     }
@@ -483,17 +495,15 @@
         }
     }
 
-    private async Task StopCode()
+    private Task StopCode()
     {
-        if (_executionCts != null)
-        {
-            await _executionCts.CancelAsync();
-        }
+        _terminalIO?.Cancel();
+        return Task.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        _executionCts?.Cancel();
-        _executionCts?.Dispose();
+        _terminalIO?.Cancel();
+        return ValueTask.CompletedTask;
     }
 }

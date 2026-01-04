@@ -5,17 +5,17 @@ using Spectre.Console.Rendering;
 namespace Spectre.Docs.Playground.Services;
 
 /// <summary>
-/// An IAnsiConsole implementation that bridges Spectre.Console with a terminal via TerminalBridge.
+/// An IAnsiConsole implementation that bridges Spectre.Console with a terminal via ITerminalBridge.
 /// Uses synchronous blocking operations which are safe on background threads with WasmEnableThreads.
 /// </summary>
 public class TerminalConsole : IAnsiConsole
 {
-    private readonly TerminalBridge _bridge;
+    private readonly ITerminalBridge _bridge;
     private readonly Lock _lock = new();
     private int _cursorLeft;
     private int _cursorTop;
 
-    public TerminalConsole(TerminalBridge bridge, int width = 80, int height = 24)
+    public TerminalConsole(ITerminalBridge bridge, int width = 80, int height = 24)
     {
         _bridge = bridge;
         Profile = new Profile(new TerminalOutput(_bridge, width, height), Encoding.UTF8)
@@ -209,7 +209,7 @@ public class TerminalConsole : IAnsiConsole
 
     private class TerminalOutput : IAnsiConsoleOutput
     {
-        public TerminalOutput(TerminalBridge bridge, int width, int height)
+        public TerminalOutput(ITerminalBridge bridge, int width, int height)
         {
             Width = width;
             Height = height;
@@ -230,9 +230,9 @@ public class TerminalConsole : IAnsiConsole
 
     private class TerminalTextWriter : TextWriter
     {
-        private readonly TerminalBridge _bridge;
+        private readonly ITerminalBridge _bridge;
 
-        public TerminalTextWriter(TerminalBridge bridge)
+        public TerminalTextWriter(ITerminalBridge bridge)
         {
             _bridge = bridge;
         }
@@ -404,9 +404,9 @@ public class TerminalConsole : IAnsiConsole
 
     private class TerminalInput : IAnsiConsoleInput
     {
-        private readonly TerminalBridge _bridge;
+        private readonly ITerminalBridge _bridge;
 
-        public TerminalInput(TerminalBridge bridge)
+        public TerminalInput(ITerminalBridge bridge)
         {
             _bridge = bridge;
         }
@@ -419,26 +419,14 @@ public class TerminalConsole : IAnsiConsole
         public ConsoleKeyInfo? ReadKey(bool intercept)
         {
             // Synchronous blocking read - safe on background thread with WasmEnableThreads
-            try
-            {
-                return _bridge.ReadKey();
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
+            // Let OperationCanceledException propagate to stop execution
+            return _bridge.ReadKey();
         }
 
         public async Task<ConsoleKeyInfo?> ReadKeyAsync(bool intercept, CancellationToken cancellationToken)
         {
-            try
-            {
-                return await _bridge.ReadKeyAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
+            // Let OperationCanceledException propagate to stop execution
+            return await _bridge.ReadKeyAsync(cancellationToken);
         }
     }
 
@@ -457,14 +445,14 @@ public class TerminalConsole : IAnsiConsole
 
     private class TerminalCursor : IAnsiConsoleCursor
     {
-        private readonly TerminalBridge _bridge;
+        private readonly ITerminalBridge _bridge;
         private readonly Func<int> _getLeft;
         private readonly Action<int> _setLeft;
         private readonly Func<int> _getTop;
         private readonly Action<int> _setTop;
 
         public TerminalCursor(
-            TerminalBridge bridge,
+            ITerminalBridge bridge,
             Func<int> getLeft, Action<int> setLeft,
             Func<int> getTop, Action<int> setTop)
         {

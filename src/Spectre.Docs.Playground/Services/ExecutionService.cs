@@ -1,19 +1,22 @@
 using System.Reflection;
 using System.Runtime.Loader;
 using Spectre.Console;
-using Spectre.Docs.Playground.Components;
 
 namespace Spectre.Docs.Playground.Services;
 
 public class ExecutionService
 {
-    public async Task ExecuteAsync(byte[] assemblyBytes, Terminal terminal, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Execute code using the new SharedTerminalIO architecture.
+    /// This completely bypasses Blazor JS interop for terminal I/O.
+    /// </summary>
+    public async Task ExecuteAsync(byte[] assemblyBytes, SharedTerminalIO terminalIO, int cols, int rows)
     {
-        // Get actual terminal dimensions
-        var (cols, rows) = await terminal.GetSize();
+        // Use the SharedTerminalIO's cancellation token (cancelled by Stop button or Ctrl+C)
+        var cancellationToken = terminalIO.CancellationToken;
 
-        // Create a bridge for thread-safe terminal I/O
-        var bridge = new TerminalBridge(cancellationToken);
+        // Create a bridge that uses the shared memory ring buffers
+        var bridge = new SharedTerminalBridge(terminalIO, cancellationToken);
 
         // Create a custom IAnsiConsole that writes to the bridge with actual terminal size
         var console = new TerminalConsole(bridge, cols, rows);
@@ -21,45 +24,27 @@ public class ExecutionService
         // Set the console as the default for Spectre.Console
         SetDefaultConsole(console);
 
-        // Create a linked cancellation token that we can cancel when execution completes
-        using var executionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        // Start the execution on a background thread
-        var executionTask = Task.Run(() => ExecuteOnBackgroundThread(assemblyBytes, bridge, cancellationToken), cancellationToken);
-
-        // Start forwarding keyboard input from terminal to bridge (uses linked token so it stops when execution completes)
-        var inputTask = ForwardInputAsync(terminal, bridge, executionCts.Token);
-
         try
         {
-            // Process output from the bridge and send to terminal (on main thread)
-            await ProcessOutputAsync(bridge, terminal, executionTask, cancellationToken);
+            // Execute on a background thread
+            // The ring buffers handle all I/O without any JS interop calls
+            await Task.Run(() => ExecuteOnBackgroundThread(assemblyBytes, bridge, cancellationToken), cancellationToken);
         }
         catch (OperationCanceledException)
         {
-            await terminal.WriteLine("\e[33mExecution cancelled.\e[0m");
+            terminalIO.WriteOutput("\e[33mExecution cancelled.\e[0m\r\n");
         }
         finally
         {
-            // Cancel the input forwarding task now that execution is complete
-            await executionCts.CancelAsync();
-
-            // Wait for input task to finish (it should exit quickly after cancellation)
-            try
-            {
-                await inputTask;
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected when we cancel
-            }
+            // Mark execution as complete
+            bridge.Complete();
 
             // Reset the default console
             ResetDefaultConsole();
         }
     }
 
-    private void ExecuteOnBackgroundThread(byte[] assemblyBytes, TerminalBridge bridge, CancellationToken cancellationToken)
+    private void ExecuteOnBackgroundThread(byte[] assemblyBytes, SharedTerminalBridge bridge, CancellationToken cancellationToken)
     {
         try
         {
@@ -73,7 +58,6 @@ public class ExecutionService
             if (entryPoint == null)
             {
                 bridge.WriteOutput("\e[31mError: No entry point found in the compiled assembly.\e[0m\r\n");
-                bridge.Complete();
                 return;
             }
 
@@ -114,50 +98,6 @@ public class ExecutionService
             {
                 bridge.WriteOutput($"\e[90m{ex.StackTrace}\e[0m\r\n");
             }
-        }
-        finally
-        {
-            bridge.Complete();
-        }
-    }
-
-    private async Task ProcessOutputAsync(TerminalBridge bridge, Terminal terminal, Task executionTask, CancellationToken cancellationToken)
-    {
-        await foreach (var output in bridge.OutputReader.ReadAllAsync(cancellationToken))
-        {
-            // Check for special clear marker
-            if (output == "\fLEAR\0")
-            {
-                await terminal.Clear();
-                continue;
-            }
-
-            await terminal.Write(output);
-        }
-
-        // Wait for execution to complete
-        await executionTask;
-    }
-
-    private async Task ForwardInputAsync(Terminal terminal, TerminalBridge bridge, CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var keyInfo = await terminal.ReadKeyAsync(cancellationToken);
-                var consoleKeyInfo = new ConsoleKeyInfo(
-                    keyInfo.KeyChar,
-                    keyInfo.Key,
-                    keyInfo.Shift,
-                    keyInfo.Alt,
-                    keyInfo.Control);
-                bridge.WriteInput(consoleKeyInfo);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Normal cancellation
         }
     }
 
