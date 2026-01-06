@@ -100,13 +100,28 @@ public sealed partial class SharedTerminalIO : IDisposable
     /// Create a new SharedTerminalIO instance.
     /// Must be called from the main thread with JS interop access.
     /// </summary>
-    public static async Task<SharedTerminalIO> CreateAsync()
+    public static async Task<SharedTerminalIO> CreateAsync(CancellationToken cancellationToken = default)
     {
         // Load the JS module if not already loaded
         if (!_moduleLoaded)
         {
-            await JSHost.ImportAsync("sharedTerminal", "/js/sharedTerminal.js");
-            _moduleLoaded = true;
+            try
+            {
+                // Apply a timeout to the module import to prevent indefinite hanging
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                await JSHost.ImportAsync("sharedTerminal", "/js/sharedTerminal.js").WaitAsync(linkedCts.Token);
+                _moduleLoaded = true;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException("Failed to load sharedTerminal.js module within 30 seconds. The terminal may not be available.");
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to load sharedTerminal.js module: {ex.Message}", ex);
+            }
         }
 
         if (_instance != null)
@@ -177,9 +192,9 @@ public sealed partial class SharedTerminalIO : IDisposable
     /// Start the JS terminal with the shared buffers.
     /// Must be called from main thread.
     /// </summary>
-    public static void StartTerminal(string containerId)
+    public static async Task StartTerminalAsync(string containerId)
     {
-        JSStartTerminal(containerId);
+        await JSStartTerminal(containerId);
     }
 
     /// <summary>
@@ -220,7 +235,7 @@ public sealed partial class SharedTerminalIO : IDisposable
     private static partial void JSRegisterBuffers(int outputPtr, int outputSize, int inputPtr, int inputSize);
 
     [JSImport("startTerminal", "sharedTerminal")]
-    private static partial void JSStartTerminal(string containerId);
+    private static partial Task JSStartTerminal(string containerId);
 
     [JSImport("stopTerminal", "sharedTerminal")]
     private static partial void JSStopTerminal();

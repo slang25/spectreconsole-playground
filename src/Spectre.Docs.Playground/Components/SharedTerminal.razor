@@ -48,8 +48,8 @@
         // Create SharedTerminalIO (this loads the module and registers buffers with JS)
         var terminalIO = await Services.SharedTerminalIO.CreateAsync();
 
-        // Start the terminal in the container
-        Services.SharedTerminalIO.StartTerminal(_containerId);
+        // Start the terminal in the container (now async to allow lazy WASM init)
+        await Services.SharedTerminalIO.StartTerminalAsync(_containerId);
 
         _isInitialized = true;
 

@@ -81,8 +81,23 @@ public sealed class UrlStateService
     /// </summary>
     public async Task<string?> GetCodeFromUrlAsync()
     {
-        var hash = await _jsRuntime.InvokeAsync<string>("urlStateInterop.getHash");
-        return Decompress(hash);
+        try
+        {
+            // Apply a timeout to prevent indefinite hanging if JS interop fails
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var hash = await _jsRuntime.InvokeAsync<string>("urlStateInterop.getHash", cts.Token);
+            return Decompress(hash);
+        }
+        catch (OperationCanceledException)
+        {
+            System.Console.WriteLine("Timeout while reading URL hash");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to read URL hash: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>

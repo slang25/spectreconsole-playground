@@ -302,12 +302,20 @@
         if (firstRender)
         {
             // Try to load code from URL hash before rendering editor
-            var codeFromUrl = await UrlStateService.GetCodeFromUrlAsync();
-            if (!string.IsNullOrEmpty(codeFromUrl))
+            try
             {
-                _initialCode = codeFromUrl;
-                // Skip welcome animation when loading shared code
-                _hasPlayedWelcome = true;
+                var codeFromUrl = await UrlStateService.GetCodeFromUrlAsync();
+                if (!string.IsNullOrEmpty(codeFromUrl))
+                {
+                    _initialCode = codeFromUrl;
+                    // Skip welcome animation when loading shared code
+                    _hasPlayedWelcome = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load code from URL: {ex.Message}");
+                // Continue without URL code - will use default
             }
 
             // Now we can render the editor with the correct initial code
@@ -319,9 +327,18 @@
                 _hasPlayedWelcome = true;
                 await Task.Delay(300);
 
-                // Initialize terminal for the welcome animation
-                _terminalIO = await _terminal.InitializeAsync();
-                await PlayWelcomeAnimation();
+                try
+                {
+                    // Initialize terminal for the welcome animation
+                    _terminalIO = await _terminal.InitializeAsync();
+                    await PlayWelcomeAnimation();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to initialize terminal: {ex.Message}");
+                    // Terminal initialization failed - the app can still function,
+                    // user can try running code which will attempt to reinitialize
+                }
             }
         }
     }

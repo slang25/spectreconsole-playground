@@ -7,8 +7,44 @@
 
 import { Terminal, FitAddon, init } from '/lib/ghostty-web/ghostty-web.js';
 
-// Initialize ghostty WASM
-await init();
+// Lazy initialization - don't block module loading with top-level await
+// as this can cause deadlocks with Blazor WASM runtime
+let initPromise = null;
+let initError = null;
+let initComplete = false;
+
+/**
+ * Initialize ghostty WASM lazily (on first terminal start).
+ * This avoids blocking module import which can deadlock with Blazor WASM.
+ */
+async function ensureInitialized() {
+    if (initComplete) {
+        return !initError;
+    }
+
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                console.log('[sharedTerminal] Initializing ghostty WASM...');
+                const wasmInitPromise = init();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Ghostty WASM initialization timed out after 30 seconds')), 30000)
+                );
+                await Promise.race([wasmInitPromise, timeoutPromise]);
+                console.log('[sharedTerminal] Ghostty WASM initialized successfully');
+                initComplete = true;
+                return true;
+            } catch (err) {
+                initError = err;
+                initComplete = true;
+                console.error('[sharedTerminal] Failed to initialize ghostty WASM:', err);
+                return false;
+            }
+        })();
+    }
+
+    return initPromise;
+}
 
 // Constants matching C# SharedTerminalIO
 const HEADER_SIZE = 12;
@@ -265,8 +301,16 @@ export function registerBuffers(outPtr, outSize, inPtr, inSize) {
 
 /**
  * Start the terminal in the specified container.
+ * This is now async to allow lazy initialization of ghostty WASM.
  */
-export function startTerminal(containerId) {
+export async function startTerminal(containerId) {
+    // Lazy init ghostty WASM on first use
+    const initSuccess = await ensureInitialized();
+    if (!initSuccess) {
+        console.error('[sharedTerminal] Cannot start terminal - initialization failed:', initError);
+        return;
+    }
+
     containerElement = document.getElementById(containerId);
     if (!containerElement) {
         console.error('[sharedTerminal] Container not found:', containerId);
