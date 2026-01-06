@@ -7,8 +7,19 @@
 
 import { Terminal, FitAddon, init } from '/lib/ghostty-web/ghostty-web.js';
 
-// Initialize ghostty WASM
-await init();
+// Initialize ghostty WASM with error handling and timeout
+let initError = null;
+try {
+    const initPromise = init();
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Ghostty WASM initialization timed out after 30 seconds')), 30000)
+    );
+    await Promise.race([initPromise, timeoutPromise]);
+    console.log('[sharedTerminal] Ghostty WASM initialized successfully');
+} catch (err) {
+    initError = err;
+    console.error('[sharedTerminal] Failed to initialize ghostty WASM:', err);
+}
 
 // Constants matching C# SharedTerminalIO
 const HEADER_SIZE = 12;
@@ -267,6 +278,11 @@ export function registerBuffers(outPtr, outSize, inPtr, inSize) {
  * Start the terminal in the specified container.
  */
 export function startTerminal(containerId) {
+    if (initError) {
+        console.error('[sharedTerminal] Cannot start terminal - initialization failed:', initError);
+        return;
+    }
+
     containerElement = document.getElementById(containerId);
     if (!containerElement) {
         console.error('[sharedTerminal] Container not found:', containerId);
