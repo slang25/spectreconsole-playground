@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option csharp_namespace = "Spectre.Docs.Playground.Services";
+
+message UrlPayload {
+  int32 version = 1;
+  string code = 2;
+  bool run_immediately = 3;
+}
