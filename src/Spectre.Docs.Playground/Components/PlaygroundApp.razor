@@ -79,6 +79,7 @@
     private bool _hasPlayedWelcome;
     private string? _initialCode;
     private bool _initialCodeLoaded;
+    private bool _runImmediately;
 
     private static readonly Dictionary<string, string> Examples = new()
     {
@@ -301,13 +302,14 @@
     {
         if (firstRender)
         {
-            // Try to load code from URL hash before rendering editor
+            // Try to load payload from URL hash before rendering editor
             try
             {
-                var codeFromUrl = await UrlStateService.GetCodeFromUrlAsync();
-                if (!string.IsNullOrEmpty(codeFromUrl))
+                var payload = await UrlStateService.GetPayloadFromUrlAsync();
+                if (payload != null && !string.IsNullOrEmpty(payload.Code))
                 {
-                    _initialCode = codeFromUrl;
+                    _initialCode = payload.Code;
+                    _runImmediately = payload.RunImmediately;
                     // Skip welcome animation when loading shared code
                     _hasPlayedWelcome = true;
                 }
@@ -322,7 +324,14 @@
             _initialCodeLoaded = true;
             StateHasChanged();
 
-            if (!_hasPlayedWelcome && _terminal != null)
+            if (_runImmediately)
+            {
+                // Run immediately after a brief delay to allow editor to initialize
+                _runImmediately = false;
+                await Task.Delay(100);
+                await RunCode();
+            }
+            else if (!_hasPlayedWelcome && _terminal != null)
             {
                 _hasPlayedWelcome = true;
                 await Task.Delay(300);
