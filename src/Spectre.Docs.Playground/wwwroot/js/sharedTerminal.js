@@ -404,6 +404,38 @@ export async function startTerminal(containerId) {
         }
     });
 
+    // Handle focus/blur events for terminal styling
+    const frame = containerElement.closest('.terminal-frame');
+    const updateFocusState = (focused) => {
+        const target = frame || containerElement;
+        if (focused) {
+            target.classList.add('terminal-focused');
+            // Use renderer's setCursorBlink method for runtime changes
+            if (terminal.renderer?.setCursorBlink) {
+                terminal.renderer.setCursorBlink(true);
+            }
+        } else {
+            target.classList.remove('terminal-focused');
+            if (terminal.renderer?.setCursorBlink) {
+                terminal.renderer.setCursorBlink(false);
+            }
+        }
+    };
+
+    // Listen for focus events on the terminal's textarea
+    if (terminal.textarea) {
+        terminal.textarea.addEventListener('focus', () => updateFocusState(true));
+        terminal.textarea.addEventListener('blur', () => updateFocusState(false));
+    }
+
+    // The container is contenteditable which steals focus from the textarea.
+    // When container gets focus, redirect it to the textarea.
+    containerElement.addEventListener('focusin', (e) => {
+        if (e.target === containerElement && terminal.textarea) {
+            terminal.textarea.focus();
+        }
+    });
+
     // Start polling for output from C#
     startOutputPoll();
 
