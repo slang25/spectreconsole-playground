@@ -28,7 +28,10 @@
             </button>
         </div>
         <div class="panel-content">
-            <PlaygroundEditor @ref="_codeEditor" />
+            @if (_initialCodeLoaded)
+            {
+                <PlaygroundEditor @ref="_codeEditor" InitialCode="@_initialCode" />
+            }
         </div>
         @if (_compilationErrors.Count > 0)
         {
@@ -74,6 +77,8 @@
     private bool _isRunning;
     private List<string> _compilationErrors = [];
     private bool _hasPlayedWelcome;
+    private string? _initialCode;
+    private bool _initialCodeLoaded;
 
     private static readonly Dictionary<string, string> Examples = new()
     {
@@ -296,20 +301,18 @@
     {
         if (firstRender)
         {
-            // Try to load code from URL hash
+            // Try to load code from URL hash before rendering editor
             var codeFromUrl = await UrlStateService.GetCodeFromUrlAsync();
-            if (!string.IsNullOrEmpty(codeFromUrl) && _codeEditor != null)
+            if (!string.IsNullOrEmpty(codeFromUrl))
             {
-                // Wait for editor to be fully initialized
-                while (!_codeEditor.IsInitialized)
-                {
-                    await Task.Delay(50);
-                }
-                await _codeEditor.SetCode(codeFromUrl);
-
+                _initialCode = codeFromUrl;
                 // Skip welcome animation when loading shared code
                 _hasPlayedWelcome = true;
             }
+
+            // Now we can render the editor with the correct initial code
+            _initialCodeLoaded = true;
+            StateHasChanged();
 
             if (!_hasPlayedWelcome && _terminal != null)
             {

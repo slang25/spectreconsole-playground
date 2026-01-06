@@ -23,7 +23,10 @@
 
     public bool IsInitialized => _isInitialized;
 
-    private const string DefaultCode =
+    [Parameter]
+    public string? InitialCode { get; set; }
+
+    public const string DefaultCode =
         """
         // Welcome to the Spectre.Console Playground!
         // Write your code below and click Run to see it in action.
@@ -70,7 +73,7 @@
             AutomaticLayout = true,
             Language = "csharp",
             Theme = "vs-dark",
-            Value = DefaultCode,
+            Value = InitialCode ?? DefaultCode,
             FontSize = 14,
             FontFamily = @"""Cascadia Code"", ""Fira Code"", Consolas, monospace",
             Minimap = new EditorMinimapOptions { Enabled = false },
