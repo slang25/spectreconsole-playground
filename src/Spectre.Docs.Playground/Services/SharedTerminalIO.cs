@@ -192,9 +192,9 @@ public sealed partial class SharedTerminalIO : IDisposable
     /// Start the JS terminal with the shared buffers.
     /// Must be called from main thread.
     /// </summary>
-    public static void StartTerminal(string containerId)
+    public static async Task StartTerminalAsync(string containerId)
     {
-        JSStartTerminal(containerId);
+        await JSStartTerminal(containerId);
     }
 
     /// <summary>
@@ -235,7 +235,7 @@ public sealed partial class SharedTerminalIO : IDisposable
     private static partial void JSRegisterBuffers(int outputPtr, int outputSize, int inputPtr, int inputSize);
 
     [JSImport("startTerminal", "sharedTerminal")]
-    private static partial void JSStartTerminal(string containerId);
+    private static partial Task JSStartTerminal(string containerId);
 
     [JSImport("stopTerminal", "sharedTerminal")]
     private static partial void JSStopTerminal();
