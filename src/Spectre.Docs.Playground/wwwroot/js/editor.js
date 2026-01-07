@@ -5,6 +5,20 @@ window.updateMonacoTheme = function(isDark) {
     }
 };
 
+// Initialize Monaco theme based on current mode (called after Monaco loads)
+window.initializeMonacoTheme = function() {
+    if (typeof monaco !== 'undefined') {
+        const isDark = document.documentElement.classList.contains('dark');
+        monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs');
+    }
+};
+
+// Get current theme for Blazor component initialization
+window.getCurrentMonacoTheme = function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return isDark ? 'vs-dark' : 'vs';
+};
+
 // Editor completion and hover provider for Monaco
 window.EditorInterop = {
     dotNetHelper: null,

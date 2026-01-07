@@ -3,10 +3,13 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<StandaloneCodeEditor @ref="_editor"
-                      Id="code-editor"
-                      CssClass="editor-instance"
-                      ConstructionOptions="EditorConstructionOptions" />
+@if (_themeInitialized)
+{
+    <StandaloneCodeEditor @ref="_editor"
+                          Id="code-editor"
+                          CssClass="editor-instance"
+                          ConstructionOptions="EditorConstructionOptions" />
+}
 
 <style>
     .editor-instance {
@@ -20,6 +23,8 @@
     private DotNetObjectReference<PlaygroundEditor>? _dotNetHelper;
     private bool _isInitializing;
     private bool _isInitialized;
+    private bool _themeInitialized;
+    private string _currentTheme = "vs-dark";
 
     public bool IsInitialized => _isInitialized;
 
@@ -72,7 +77,7 @@
         {
             AutomaticLayout = true,
             Language = "csharp",
-            Theme = "vs-dark",
+            Theme = _currentTheme,
             Value = InitialCode ?? DefaultCode,
             FontSize = 14,
             FontFamily = @"""Cascadia Code"", ""Fira Code"", Consolas, monospace",
@@ -103,7 +108,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_isInitialized && !_isInitializing)
+        if (firstRender && !_themeInitialized)
+        {
+            // Get the current theme before rendering the editor to avoid flash
+            _currentTheme = await JSRuntime.InvokeAsync<string>("getCurrentMonacoTheme");
+            _themeInitialized = true;
+            StateHasChanged();
+            return;
+        }
+
+        if (_themeInitialized && !_isInitialized && !_isInitializing)
         {
             _isInitializing = true;
             try
