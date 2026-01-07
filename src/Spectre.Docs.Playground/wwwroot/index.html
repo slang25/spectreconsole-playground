@@ -20,8 +20,11 @@
             --skeleton-panel-border: oklch(92.2% 0 0);
             --skeleton-text: oklch(55.6% 0 0);
             --skeleton-resizer: oklch(87% 0 0);
-            --skeleton-terminal-frame: rgba(23, 23, 23, 0.8);
-            --skeleton-terminal-inner: #1e1e1e;
+            --skeleton-editor-bg: #fffffe;
+            --skeleton-terminal-panel-bg: white;
+            --skeleton-terminal-frame: oklch(97% 0 0);
+            --skeleton-terminal-frame-border: oklch(92.2% 0 0);
+            --skeleton-terminal-inner: #fffffe;
             --skeleton-dot-1: rgba(251, 191, 36, 0.9);
             --skeleton-dot-2: rgba(252, 211, 77, 0.9);
             --skeleton-dot-3: rgba(253, 230, 138, 0.9);
@@ -37,7 +40,10 @@
             --skeleton-panel-border: oklch(26.9% 0 0);
             --skeleton-text: oklch(70.8% 0 0);
             --skeleton-resizer: oklch(43.9% 0 0);
+            --skeleton-editor-bg: #1e1e1e;
+            --skeleton-terminal-panel-bg: oklch(20.5% 0 0);
             --skeleton-terminal-frame: oklch(26.9% 0 0);
+            --skeleton-terminal-frame-border: rgba(115, 115, 115, 0.1);
             --skeleton-terminal-inner: #1e1e1e;
             --skeleton-dot-1: rgba(180, 83, 9, 0.6);
             --skeleton-dot-2: rgba(217, 119, 6, 0.6);
@@ -221,7 +227,8 @@
         }
         .skeleton-editor-content {
             flex: 1;
-            background: var(--skeleton-terminal-inner);
+            overflow: hidden;
+            background: var(--skeleton-editor-bg);
         }
 
         /* Resizer skeleton */
@@ -237,7 +244,7 @@
             min-width: 200px;
             display: flex;
             flex-direction: column;
-            background: var(--skeleton-bg);
+            background: var(--skeleton-terminal-panel-bg);
         }
         .skeleton-terminal-header-btns {
             display: flex;
@@ -261,16 +268,18 @@
         }
         .skeleton-terminal-content {
             flex: 1;
-            padding: 0.5rem;
+            overflow: hidden;
         }
         .skeleton-terminal-frame {
-            height: 100%;
             display: flex;
             flex-direction: column;
+            flex: 1;
+            margin: 0.5rem;
             padding: 0.25rem;
             border-radius: 0.75rem;
             background: var(--skeleton-terminal-frame);
-            border: 1px solid rgba(115, 115, 115, 0.3);
+            border: 1px solid var(--skeleton-terminal-frame-border);
+            overflow: hidden;
         }
         .skeleton-terminal-dots {
             display: flex;
@@ -430,17 +439,20 @@
 
     <!-- BlazorMonaco -->
     <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
+    <script src="js/editor.js"></script>
     <script>
         console.log('[page] Loading Monaco editor...');
         require.config({ paths: { 'vs': '_content/BlazorMonaco/lib/monaco-editor/min/vs' } });
         require(['vs/editor/editor.main'], function() {
             console.log('[page] Monaco editor loaded');
+            // Initialize Monaco theme based on current light/dark mode
+            if (window.initializeMonacoTheme) {
+                window.initializeMonacoTheme();
+            }
         });
     </script>
     <script src="_content/BlazorMonaco/jsInterop.js"></script>
     <script>console.log('[page] BlazorMonaco jsInterop loaded');</script>
-    <script src="js/editor.js"></script>
-    <script>console.log('[page] editor.js loaded');</script>
     <script src="js/urlstate.js"></script>
 
     <script>console.log('[page] Loading Blazor WASM...');</script>

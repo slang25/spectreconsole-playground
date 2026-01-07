@@ -44,10 +44,10 @@
     --btn-secondary-border: var(--color-base-200);
     --btn-secondary-text: var(--color-base-700);
     --btn-secondary-hover: var(--color-base-200);
-    /* Terminal frame - always dark like homepage */
-    --terminal-frame-bg: rgba(23, 23, 23, 0.8);
-    --terminal-frame-border: rgba(115, 115, 115, 0.5);
-    --terminal-inner-bg: #1e1e1e;
+    /* Terminal frame - light mode */
+    --terminal-frame-bg: var(--color-base-100);
+    --terminal-frame-border: var(--color-base-200);
+    --terminal-inner-bg: #fffffe;
     --terminal-panel-bg: white;
     /* Dots - light mode (brighter) */
     --dot-1-bg: rgba(251, 191, 36, 0.9);
