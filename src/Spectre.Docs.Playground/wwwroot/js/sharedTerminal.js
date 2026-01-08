@@ -62,6 +62,8 @@ let fitAddon = null;
 let pollHandle = null;
 let resizeObserver = null;
 let containerElement = null;
+let isTerminalFocused = false;
+let isExecutionRunning = false;
 /**
  * Request cancellation (called when Ctrl+C is pressed).
  * This calls the C# exported RequestCancellationAsync method.
@@ -77,6 +79,25 @@ async function requestCancellation() {
     } catch {
         // Ignore errors - user can use Stop button as fallback
     }
+}
+
+/**
+ * Update cursor blink state based on focus AND execution state.
+ * Cursor only blinks when terminal is focused AND execution is running.
+ */
+function updateCursorBlink() {
+    if (!terminal?.renderer?.setCursorBlink) return;
+    const shouldBlink = isTerminalFocused && isExecutionRunning;
+    terminal.renderer.setCursorBlink(shouldBlink);
+}
+
+/**
+ * Set whether execution is currently running.
+ * Called from C# when execution starts/stops.
+ */
+export function setExecutionRunning(running) {
+    isExecutionRunning = running;
+    updateCursorBlink();
 }
 
 /**
@@ -407,19 +428,15 @@ export async function startTerminal(containerId) {
     // Handle focus/blur events for terminal styling
     const frame = containerElement.closest('.terminal-frame');
     const updateFocusState = (focused) => {
+        isTerminalFocused = focused;
         const target = frame || containerElement;
         if (focused) {
             target.classList.add('terminal-focused');
-            // Use renderer's setCursorBlink method for runtime changes
-            if (terminal.renderer?.setCursorBlink) {
-                terminal.renderer.setCursorBlink(true);
-            }
         } else {
             target.classList.remove('terminal-focused');
-            if (terminal.renderer?.setCursorBlink) {
-                terminal.renderer.setCursorBlink(false);
-            }
         }
+        // Cursor blinks only when terminal is focused AND execution is running
+        updateCursorBlink();
     };
 
     // Listen for focus events on the terminal's textarea
@@ -659,6 +676,7 @@ globalThis.sharedTerminal = {
     writeTerminal,
     getTerminalSize,
     writeCancelKey,
+    setExecutionRunning,
     dispose
 };
 
@@ -671,5 +689,6 @@ export default {
     writeTerminal,
     getTerminalSize,
     writeCancelKey,
+    setExecutionRunning,
     dispose
 };

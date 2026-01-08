@@ -464,6 +464,7 @@
 
         _isRunning = true;
         _compilationErrors.Clear();
+        Services.SharedTerminalIO.SetExecutionRunning(true);
         StateHasChanged();
 
         try
@@ -512,6 +513,7 @@
         finally
         {
             _isRunning = false;
+            Services.SharedTerminalIO.SetExecutionRunning(false);
             StateHasChanged();
         }
     }

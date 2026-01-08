@@ -230,6 +230,15 @@ public sealed partial class SharedTerminalIO : IDisposable
         return ((int)result.GetPropertyAsDouble("cols"), (int)result.GetPropertyAsDouble("rows"));
     }
 
+    /// <summary>
+    /// Set whether execution is currently running.
+    /// Controls cursor blink behavior (cursor only blinks when running AND focused).
+    /// </summary>
+    public static void SetExecutionRunning(bool running)
+    {
+        JSSetExecutionRunning(running);
+    }
+
     // JS interop methods - these are the ONLY JS calls needed after initialization
     [JSImport("registerBuffers", "sharedTerminal")]
     private static partial void JSRegisterBuffers(int outputPtr, int outputSize, int inputPtr, int inputSize);
@@ -251,6 +260,9 @@ public sealed partial class SharedTerminalIO : IDisposable
 
     [JSImport("writeCancelKey", "sharedTerminal")]
     private static partial void JSWriteCancelKey();
+
+    [JSImport("setExecutionRunning", "sharedTerminal")]
+    private static partial void JSSetExecutionRunning(bool running);
 
     public void Dispose()
     {
