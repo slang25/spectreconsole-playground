@@ -22,13 +22,13 @@
             --skeleton-resizer: oklch(87% 0 0);
             --skeleton-editor-bg: #fffffe;
             --skeleton-terminal-panel-bg: white;
-            --skeleton-terminal-frame: oklch(97% 0 0);
-            --skeleton-terminal-frame-border: oklch(92.2% 0 0);
-            --skeleton-terminal-inner: #fffffe;
-            --skeleton-dot-1: rgba(251, 191, 36, 0.9);
-            --skeleton-dot-2: rgba(252, 211, 77, 0.9);
-            --skeleton-dot-3: rgba(253, 230, 138, 0.9);
-            --skeleton-dot-border: rgba(120, 53, 15, 0.5);
+            --skeleton-terminal-frame: oklch(26.9% 0 0);
+            --skeleton-terminal-frame-border: rgba(115, 115, 115, 0.1);
+            --skeleton-terminal-inner: #1e1e1e;
+            --skeleton-dot-1: rgba(180, 83, 9, 0.6);
+            --skeleton-dot-2: rgba(217, 119, 6, 0.6);
+            --skeleton-dot-3: rgba(245, 158, 11, 0.6);
+            --skeleton-dot-border: rgba(217, 119, 6, 1);
             --skeleton-logo-gradient-start: oklch(0.577 0.245 211.903);
             --skeleton-logo-gradient-end: oklch(0.577 0.245 226.903);
         }
@@ -191,8 +191,6 @@
         .skeleton-editor-panel {
             width: 50%;
             min-width: 200px;
-            display: flex;
-            flex-direction: column;
         }
         .skeleton-panel-header {
             display: flex;
@@ -423,7 +421,9 @@
                                 <div class="skeleton-dot skeleton-dot-2"></div>
                                 <div class="skeleton-dot skeleton-dot-3"></div>
                             </div>
-                            <div class="skeleton-terminal-inner"></div>
+                            <div class="skeleton-terminal-inner">
+                                <div class="terminal-container" style="height: 472px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
