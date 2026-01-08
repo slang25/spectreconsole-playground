@@ -464,13 +464,15 @@
 
         _isRunning = true;
         _compilationErrors.Clear();
-        Services.SharedTerminalIO.SetExecutionRunning(true);
         StateHasChanged();
 
         try
         {
             // Initialize SharedTerminalIO if needed (this starts the terminal)
+            // Must happen before SetExecutionRunning to ensure JS module is imported
             _terminalIO ??= await _terminal.InitializeAsync();
+
+            Services.SharedTerminalIO.SetExecutionRunning(true);
 
             // Reset the terminal IO for a fresh execution (creates new CancellationTokenSource)
             _terminalIO.Reset();
