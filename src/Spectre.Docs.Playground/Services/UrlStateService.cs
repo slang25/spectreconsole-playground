@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text;
 using Google.Protobuf;
 using Microsoft.JSInterop;
 
@@ -9,16 +8,11 @@ namespace Spectre.Docs.Playground.Services;
 /// Service for persisting editor state in the URL hash using Protobuf + Deflate compression.
 /// </summary>
 /// <remarks>
-/// Payload format (v1+):
-///   Protobuf-encoded UrlPayload message, then deflate-compressed, then base64url-encoded.
-///
-/// Legacy format (v0) is raw UTF-8 code without protobuf wrapper.
+/// Payload format: Protobuf-encoded UrlPayload message, deflate-compressed, base64url-encoded.
 /// </remarks>
 public sealed class UrlStateService
 {
     private readonly IJSRuntime _jsRuntime;
-
-    private const int CurrentVersion = 1;
 
     public UrlStateService(IJSRuntime jsRuntime)
     {
@@ -37,7 +31,6 @@ public sealed class UrlStateService
 
         var payload = new UrlPayload
         {
-            Version = CurrentVersion,
             Code = code,
             RunImmediately = runImmediately
         };
@@ -47,7 +40,6 @@ public sealed class UrlStateService
 
     /// <summary>
     /// Decodes a URL payload from the encoded string.
-    /// Supports both the new protobuf format (v1+) and legacy format (raw code).
     /// </summary>
     public static UrlPayload? Decode(string encoded)
     {
@@ -64,28 +56,7 @@ public sealed class UrlStateService
                 return null;
             }
 
-            // Try to parse as protobuf first
-            try
-            {
-                var payload = UrlPayload.Parser.ParseFrom(bytes);
-                // Valid protobuf with version >= 1 means it's the new format
-                if (payload.Version >= 1)
-                {
-                    return payload;
-                }
-            }
-            catch (InvalidProtocolBufferException)
-            {
-                // Not a valid protobuf message, fall through to legacy handling
-            }
-
-            // Legacy format (v0): raw UTF-8 code without protobuf wrapper
-            return new UrlPayload
-            {
-                Version = 0,
-                Code = Encoding.UTF8.GetString(bytes),
-                RunImmediately = false
-            };
+            return UrlPayload.Parser.ParseFrom(bytes);
         }
         catch
         {
