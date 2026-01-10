@@ -295,6 +295,96 @@
                 });
 
             AnsiConsole.MarkupLine("[yellow]All steps completed![/]");
+            """,
+
+        ["Spinners"] = """
+            // Show a spinner while doing work
+            AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .Start("Processing...", ctx =>
+                {
+                    Thread.Sleep(1000);
+                    ctx.Status("Loading data...");
+                    ctx.Spinner(Spinner.Known.Star);
+                    Thread.Sleep(1000);
+                    ctx.Status("Almost done...");
+                    ctx.Spinner(Spinner.Known.Bounce);
+                    Thread.Sleep(1000);
+                });
+
+            AnsiConsole.MarkupLine("[green]Done![/]");
+            AnsiConsole.WriteLine();
+
+            // Show different spinner styles
+            var spinners = new[] { "Dots", "Star", "Bounce", "Clock", "Earth", "Hearts" };
+            var table = new Table().Border(TableBorder.Rounded);
+            table.AddColumn("Spinner Name");
+            table.AddColumn("Description");
+
+            foreach (var name in spinners)
+            {
+                table.AddRow($"[cyan]{name}[/]", $"Spinner.Known.{name}");
+            }
+
+            AnsiConsole.Write(table);
+            """,
+
+        ["Markup"] = """
+            // Basic colors
+            AnsiConsole.MarkupLine("[red]Red[/] [green]Green[/] [blue]Blue[/] [yellow]Yellow[/]");
+            AnsiConsole.WriteLine();
+
+            // Styles
+            AnsiConsole.MarkupLine("[bold]Bold[/] [italic]Italic[/] [underline]Underline[/] [strikethrough]Strikethrough[/]");
+            AnsiConsole.WriteLine();
+
+            // Combined styles
+            AnsiConsole.MarkupLine("[bold red]Bold Red[/] [italic blue]Italic Blue[/] [underline green]Underline Green[/]");
+            AnsiConsole.WriteLine();
+
+            // Background colors
+            AnsiConsole.MarkupLine("[white on blue] White on Blue [/] [black on yellow] Black on Yellow [/]");
+            AnsiConsole.WriteLine();
+
+            // Links (shown as underlined in terminal)
+            AnsiConsole.MarkupLine("[link=https://spectreconsole.net]Visit Spectre.Console[/]");
+            AnsiConsole.WriteLine();
+
+            // RGB and hex colors
+            AnsiConsole.MarkupLine("[rgb(255,165,0)]Orange (RGB)[/] [#FF69B4]Hot Pink (Hex)[/]");
+            AnsiConsole.WriteLine();
+
+            // Escaping brackets
+            AnsiConsole.MarkupLine("Use [[double brackets]] to escape markup");
+            """,
+
+        ["Emojis"] = """
+            // Display emojis using the Emoji class
+            AnsiConsole.MarkupLine($"Hello {Emoji.Known.WavingHand}");
+            AnsiConsole.MarkupLine($"Great job! {Emoji.Known.ThumbsUp} {Emoji.Known.PartyPopper}");
+            AnsiConsole.WriteLine();
+
+            // Common emojis in a table
+            var table = new Table().Border(TableBorder.Rounded);
+            table.AddColumn("[cyan]Emoji[/]");
+            table.AddColumn("[cyan]Code[/]");
+
+            table.AddRow($"{Emoji.Known.CheckMarkButton}", "Emoji.Known.CheckMarkButton");
+            table.AddRow($"{Emoji.Known.CrossMark}", "Emoji.Known.CrossMark");
+            table.AddRow($"{Emoji.Known.Star}", "Emoji.Known.Star");
+            table.AddRow($"{Emoji.Known.Fire}", "Emoji.Known.Fire");
+            table.AddRow($"{Emoji.Known.Rocket}", "Emoji.Known.Rocket");
+            table.AddRow($"{Emoji.Known.GreenCircle}", "Emoji.Known.GreenCircle");
+            table.AddRow($"{Emoji.Known.RedCircle}", "Emoji.Known.RedCircle");
+            table.AddRow($"{Emoji.Known.Warning}", "Emoji.Known.Warning");
+
+            AnsiConsole.Write(table);
+            AnsiConsole.WriteLine();
+
+            // Emojis in markup
+            AnsiConsole.MarkupLine($"[green]Success![/] {Emoji.Known.CheckMarkButton}");
+            AnsiConsole.MarkupLine($"[red]Error![/] {Emoji.Known.CrossMark}");
+            AnsiConsole.MarkupLine($"[yellow]Warning![/] {Emoji.Known.Warning}");
             """
     };
 
