@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "Spectre.Docs.Playground.Services";
+option csharp_namespace = "StuDev.Spectre.Console.Playground.Utilities";
 
 message UrlPayload {
   string code = 1;
