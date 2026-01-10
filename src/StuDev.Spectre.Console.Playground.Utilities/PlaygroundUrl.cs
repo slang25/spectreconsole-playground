@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.IO.Compression;
 using Google.Protobuf;
 
@@ -68,14 +69,6 @@ public sealed class PlaygroundUrl
             deflate.Write(bytes, 0, bytes.Length);
         }
 
-        return ToBase64Url(output.ToArray());
-    }
-
-    private static string ToBase64Url(byte[] bytes)
-    {
-        return Convert.ToBase64String(bytes)
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
+        return Base64Url.EncodeToString(output.ToArray());
     }
 }

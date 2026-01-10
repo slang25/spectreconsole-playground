@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.IO.Compression;
 using Google.Protobuf;
 using Microsoft.JSInterop;
@@ -65,18 +66,6 @@ public sealed class UrlStateService
     }
 
     /// <summary>
-    /// Compresses and encodes code to a URL-safe Base64 string.
-    /// </summary>
-    [Obsolete("Use Encode() instead for versioned payloads")]
-    public static string Compress(string code) => Encode(code);
-
-    /// <summary>
-    /// Decodes and decompresses a URL-safe Base64 string back to code.
-    /// </summary>
-    [Obsolete("Use Decode() instead for versioned payloads")]
-    public static string? Decompress(string encoded) => Decode(encoded)?.Code;
-
-    /// <summary>
     /// Updates the URL hash with the compressed payload.
     /// </summary>
     public async Task UpdateUrlAsync(string code, bool runImmediately = false)
@@ -109,16 +98,6 @@ public sealed class UrlStateService
     }
 
     /// <summary>
-    /// Gets the code from the URL hash, if present.
-    /// </summary>
-    [Obsolete("Use GetPayloadFromUrlAsync() instead to access all payload fields")]
-    public async Task<string?> GetCodeFromUrlAsync()
-    {
-        var payload = await GetPayloadFromUrlAsync();
-        return payload?.Code;
-    }
-
-    /// <summary>
     /// Compresses bytes using Deflate and encodes to URL-safe Base64.
     /// </summary>
     private static string CompressBytes(byte[] bytes)
@@ -129,7 +108,7 @@ public sealed class UrlStateService
             deflate.Write(bytes, 0, bytes.Length);
         }
 
-        return ToBase64Url(output.ToArray());
+        return Base64Url.EncodeToString(output.ToArray());
     }
 
     /// <summary>
@@ -139,7 +118,7 @@ public sealed class UrlStateService
     {
         try
         {
-            var compressed = FromBase64Url(encoded);
+            var compressed = Base64Url.DecodeFromChars(encoded);
 
             using var input = new MemoryStream(compressed);
             using var deflate = new DeflateStream(input, CompressionMode.Decompress);
@@ -153,36 +132,5 @@ public sealed class UrlStateService
         {
             return null;
         }
-    }
-
-    /// <summary>
-    /// Converts bytes to URL-safe Base64 (RFC 4648 §5).
-    /// </summary>
-    private static string ToBase64Url(byte[] bytes)
-    {
-        return Convert.ToBase64String(bytes)
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-    }
-
-    /// <summary>
-    /// Converts URL-safe Base64 back to bytes.
-    /// </summary>
-    private static byte[] FromBase64Url(string encoded)
-    {
-        // Restore standard Base64 characters
-        var base64 = encoded
-            .Replace('-', '+')
-            .Replace('_', '/');
-
-        // Add padding if needed
-        switch (base64.Length % 4)
-        {
-            case 2: base64 += "=="; break;
-            case 3: base64 += "="; break;
-        }
-
-        return Convert.FromBase64String(base64);
     }
 }
