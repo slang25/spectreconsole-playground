@@ -460,7 +460,13 @@
     <script type="module">
         console.log('[page] Blazor script loaded, starting Blazor...');
         try {
-            await Blazor.start();
+            await Blazor.start({
+                configureRuntime: dotnet => {
+                    // Workaround for .NET 10 Blazor WASM hang issue (dotnet/runtime#122529)
+                    dotnet.withEnvironmentVariable('MONO_INTERPRETER_OPTIONS', '-ssa');
+                    console.log('[page] Set MONO_INTERPRETER_OPTIONS=-ssa');
+                }
+            });
             console.log('[page] Blazor WASM started and ready');
         } catch(err) {
             console.error('[page] Blazor start error:', err);
