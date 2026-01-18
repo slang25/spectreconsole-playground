@@ -392,6 +392,10 @@
     {
         if (firstRender)
         {
+            // DEBUG: Verify MONO_INTERPRETER_OPTIONS is set
+            var monoOpts = Environment.GetEnvironmentVariable("MONO_INTERPRETER_OPTIONS");
+            Console.WriteLine($"[DEBUG] MONO_INTERPRETER_OPTIONS = '{monoOpts}'");
+
             // Try to load payload from URL hash before rendering editor
             try
             {
