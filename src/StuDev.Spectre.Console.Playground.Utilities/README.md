@@ -1,6 +1,6 @@
 # StuDev.Spectre.Console.Playground.Utilities
 
-A .NET library for generating shareable URLs for the [Spectre.Console Playground](https://playground.spectreconsole.net/).
+A .NET library for generating shareable URLs for the [Spectre.Console Playground](https://spectreconsole-playground.pages.dev/).
 
 ## Installation
 
@@ -13,7 +13,7 @@ dotnet add package StuDev.Spectre.Console.Playground.Utilities
 ```csharp
 using StuDev.Spectre.Console.Playground.Utilities;
 
-var playground = new PlaygroundUrl(new Uri("https://playground.spectreconsole.net/"));
+var playground = new PlaygroundUrl(new Uri("https://spectreconsole-playground.pages.dev/"));
 
 // Create a URL with code that runs automatically
 var url = playground.Create(
@@ -24,7 +24,7 @@ var url = playground.Create(
 );
 
 Console.WriteLine(url);
-// Output: https://playground.spectreconsole.net/#eJw...
+// Output: https://spectreconsole-playground.pages.dev/#eJw...
 ```
 
 ## API
