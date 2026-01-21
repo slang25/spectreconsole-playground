@@ -4,6 +4,18 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14</LangVersion>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>StuDev.Spectre.Console.Playground.Utilities</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Stuart Lang</Authors>
+    <Description>Utilities for Spectre.Console Playground - provides protobuf message definitions for playground URL encoding/decoding.</Description>
+    <PackageTags>spectre;console;playground;protobuf</PackageTags>
+    <PackageProjectUrl>https://github.com/slang25/Spectre.Docs.Playground</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/slang25/Spectre.Docs.Playground</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,5 +25,9 @@
 
   <ItemGroup>
     <Protobuf Include="Protos\*.proto" GrpcServices="None" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 </Project>
