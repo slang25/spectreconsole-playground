@@ -391,79 +391,69 @@
             // Spectre.Tui - Direct Terminal Rendering
             // Uses the low-level Spectre.Tui primitives for TUI apps
 
-            using var terminal = Terminal.Create();
+            using var terminal = Terminal.Create(new FullscreenMode());
             var renderer = new Renderer(terminal);
 
-            // Enter fullscreen mode for TUI
-            terminal.EnterMode(FullscreenMode.Instance);
+            var frames = 50;
+            var spinChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+            var random = new Random();
+            var logs = new Queue<string>();
+            var logMessages = new[] {
+                "Request received", "Processing data", "Cache hit",
+                "Query completed", "Response sent", "Job started"
+            };
 
-            try
+            for (int frame = 0; frame < frames; frame++)
             {
-                var frames = 50;
-                var spinChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
-                var random = new Random();
-                var logs = new Queue<string>();
-                var logMessages = new[] {
-                    "Request received", "Processing data", "Cache hit",
-                    "Query completed", "Response sent", "Job started"
-                };
-
-                for (int frame = 0; frame < frames; frame++)
+                // Add a log entry every few frames
+                if (frame % 3 == 0)
                 {
-                    // Add a log entry every few frames
-                    if (frame % 3 == 0)
+                    logs.Enqueue($"{DateTime.Now:HH:mm:ss} {logMessages[random.Next(logMessages.Length)]}");
+                    if (logs.Count > 8) logs.Dequeue();
+                }
+
+                renderer.Draw((ctx, size) =>
+                {
+                    // Draw border
+                    ctx.SetString(0, 0, "╭" + new string('─', Math.Max(0, size.Width - 2)) + "╮", null, null);
+                    for (int y = 1; y < size.Height - 1; y++)
                     {
-                        logs.Enqueue($"{DateTime.Now:HH:mm:ss} {logMessages[random.Next(logMessages.Length)]}");
-                        if (logs.Count > 8) logs.Dequeue();
+                        ctx.SetString(0, y, "│", null, null);
+                        ctx.SetString(size.Width - 1, y, "│", null, null);
+                    }
+                    ctx.SetString(0, size.Height - 1, "╰" + new string('─', Math.Max(0, size.Width - 2)) + "╯", null, null);
+
+                    // Header
+                    var title = " Spectre.Tui Monitor ";
+                    ctx.SetString((size.Width - title.Length) / 2, 0, title, null, null);
+
+                    // Spinner and progress
+                    var spinner = spinChars[frame % spinChars.Length];
+                    var progress = (frame * 100) / frames;
+                    var barWidth = 20;
+                    var filled = (progress * barWidth) / 100;
+                    var bar = new string('█', filled) + new string('░', barWidth - filled);
+                    ctx.SetString(2, 2, $"{spinner} Progress: [{bar}] {progress}%", null, null);
+
+                    // Stats
+                    ctx.SetString(2, 4, $"CPU: {random.Next(10, 60)}%  Memory: {random.Next(200, 400)}MB  Frame: {frame + 1}/{frames}", null, null);
+
+                    // Log entries
+                    ctx.SetString(2, 6, "─── Recent Activity ───", null, null);
+                    int logY = 7;
+                    foreach (var log in logs)
+                    {
+                        if (logY < size.Height - 2)
+                        {
+                            ctx.SetString(2, logY++, log, null, null);
+                        }
                     }
 
-                    renderer.Draw((ctx, size) =>
-                    {
-                        // Draw border
-                        ctx.SetString(0, 0, "╭" + new string('─', Math.Max(0, size.Width - 2)) + "╮");
-                        for (int y = 1; y < size.Height - 1; y++)
-                        {
-                            ctx.SetString(0, y, "│");
-                            ctx.SetString(size.Width - 1, y, "│");
-                        }
-                        ctx.SetString(0, size.Height - 1, "╰" + new string('─', Math.Max(0, size.Width - 2)) + "╯");
+                    // Footer
+                    ctx.SetString(2, size.Height - 2, $"Size: {size.Width}x{size.Height} | {DateTime.Now:HH:mm:ss}", null, null);
+                });
 
-                        // Header
-                        var title = " Spectre.Tui Monitor ";
-                        ctx.SetString((size.Width - title.Length) / 2, 0, title);
-
-                        // Spinner and progress
-                        var spinner = spinChars[frame % spinChars.Length];
-                        var progress = (frame * 100) / frames;
-                        var barWidth = 20;
-                        var filled = (progress * barWidth) / 100;
-                        var bar = new string('█', filled) + new string('░', barWidth - filled);
-                        ctx.SetString(2, 2, $"{spinner} Progress: [{bar}] {progress}%");
-
-                        // Stats
-                        ctx.SetString(2, 4, $"CPU: {random.Next(10, 60)}%  Memory: {random.Next(200, 400)}MB  Frame: {frame + 1}/{frames}");
-
-                        // Log entries
-                        ctx.SetString(2, 6, "─── Recent Activity ───");
-                        int logY = 7;
-                        foreach (var log in logs)
-                        {
-                            if (logY < size.Height - 2)
-                            {
-                                ctx.SetString(2, logY++, log);
-                            }
-                        }
-
-                        // Footer
-                        ctx.SetString(2, size.Height - 2, $"Size: {size.Width}x{size.Height} | {DateTime.Now:HH:mm:ss}");
-                    });
-
-                    Thread.Sleep(100);
-                }
-            }
-            finally
-            {
-                terminal.LeaveMode();
+                Thread.Sleep(100);
             }
 
             AnsiConsole.MarkupLine("[green]TUI completed![/]");
