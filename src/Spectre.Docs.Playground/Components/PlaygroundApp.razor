@@ -388,98 +388,52 @@
             """,
 
         ["TUI App (Spectre.Tui)"] = """
-            // Spectre.Tui - Direct Terminal Rendering
-            // Showcases the public API: Terminal, Renderer, Appearance, RenderContext
+            // Spectre.Tui - Direct Terminal Rendering API
+            // Note: Requires a real terminal - won't run in browser/WASM
 
-            using var terminal = Terminal.Create(new FullscreenMode());
-            var renderer = new Renderer(terminal);
-            renderer.SetTargetFps(30);
+            AnsiConsole.MarkupLine("[bold cyan]Spectre.Tui API Reference[/]");
+            AnsiConsole.WriteLine();
 
-            // Define styles using Appearance
-            var borderStyle = new Appearance { Foreground = Color.Blue };
-            var titleStyle = new Appearance { Foreground = Color.Yellow, Decoration = Decoration.Bold };
-            var headerStyle = new Appearance { Foreground = Color.Cyan };
-            var progressStyle = new Appearance { Foreground = Color.Green };
-            var statLabelStyle = new Appearance { Foreground = Color.Grey };
-            var statValueStyle = new Appearance { Foreground = Color.White };
-            var logStyle = new Appearance { Foreground = Color.Grey };
-            var footerStyle = new Appearance { Foreground = Color.DarkSlateGray1 };
+            // Show the public types available
+            var typesTable = new Table().Border(TableBorder.Rounded);
+            typesTable.AddColumn("[yellow]Type[/]");
+            typesTable.AddColumn("[yellow]Description[/]");
+            typesTable.AddRow("[cyan]Terminal[/]", "Factory for creating terminal instances");
+            typesTable.AddRow("[cyan]Renderer[/]", "Manages drawing frames to terminal");
+            typesTable.AddRow("[cyan]RenderContext[/]", "Drawing surface with SetString, SetSymbol, etc.");
+            typesTable.AddRow("[cyan]Appearance[/]", "Style with Foreground, Background, Decoration");
+            typesTable.AddRow("[cyan]FullscreenMode[/]", "Fullscreen terminal mode");
+            typesTable.AddRow("[cyan]InlineMode[/]", "Inline rendering mode (fixed height)");
+            typesTable.AddRow("[cyan]Size, Position[/]", "Geometry types");
+            typesTable.AddRow("[cyan]Cell, TextSpan[/]", "Low-level text primitives");
+            AnsiConsole.Write(typesTable);
+            AnsiConsole.WriteLine();
 
-            var frames = 60;
-            var spinChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
-            var random = new Random();
-            var logs = new Queue<string>();
-            var logMessages = new[] {
-                "Request received", "Processing data", "Cache hit",
-                "Query completed", "Response sent", "Job started",
-                "Connection opened", "Task queued", "Event fired"
-            };
+            // Show example code
+            AnsiConsole.MarkupLine("[bold yellow]Example Usage:[/]");
+            var code = "// Create terminal in fullscreen mode\n" +
+                "using var terminal = Terminal.Create(new FullscreenMode());\n" +
+                "var renderer = new Renderer(terminal);\n" +
+                "renderer.SetTargetFps(30);\n\n" +
+                "// Define styles\n" +
+                "var style = new Appearance {\n" +
+                "    Foreground = Color.Cyan,\n" +
+                "    Decoration = Decoration.Bold\n" +
+                "};\n\n" +
+                "// Render loop\n" +
+                "renderer.Draw((ctx, elapsed) => {\n" +
+                "    var size = terminal.GetSize();\n" +
+                "    ctx.SetString(0, 0, \"Hello TUI!\", style, null);\n" +
+                "});";
+            var codePanel = new Panel(code)
+                .Header("[green]Spectre.Tui Code[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderStyle(Style.Parse("green"));
+            AnsiConsole.Write(codePanel);
+            AnsiConsole.WriteLine();
 
-            for (int frame = 0; frame < frames; frame++)
-            {
-                // Add log entries periodically
-                if (frame % 5 == 0)
-                {
-                    logs.Enqueue($"{DateTime.Now:HH:mm:ss.fff} {logMessages[random.Next(logMessages.Length)]}");
-                    if (logs.Count > 6) logs.Dequeue();
-                }
-
-                renderer.Draw((RenderContext ctx, TimeSpan elapsed) =>
-                {
-                    // Get terminal size from the terminal instance
-                    var size = terminal.GetSize();
-
-                    // Draw styled border using SetString with Appearance
-                    ctx.SetString(0, 0, "╭" + new string('─', Math.Max(0, size.Width - 2)) + "╮", borderStyle, null);
-                    for (int y = 1; y < size.Height - 1; y++)
-                    {
-                        ctx.SetString(0, y, "│", borderStyle, null);
-                        ctx.SetString(size.Width - 1, y, "│", borderStyle, null);
-                    }
-                    ctx.SetString(0, size.Height - 1, "╰" + new string('─', Math.Max(0, size.Width - 2)) + "╯", borderStyle, null);
-
-                    // Centered title with style
-                    var title = " Spectre.Tui Demo ";
-                    ctx.SetString((size.Width - title.Length) / 2, 0, title, titleStyle, null);
-
-                    // Section header
-                    ctx.SetString(2, 2, "━━━ Progress ━━━", headerStyle, null);
-
-                    // Animated spinner and progress bar
-                    var spinner = spinChars[frame % spinChars.Length];
-                    var progress = (frame * 100) / frames;
-                    var barWidth = Math.Min(30, size.Width - 20);
-                    var filled = (progress * barWidth) / 100;
-                    var bar = new string('█', filled) + new string('░', barWidth - filled);
-                    ctx.SetString(2, 3, $"{spinner} [{bar}] {progress,3}%", progressStyle, null);
-
-                    // Stats section
-                    ctx.SetString(2, 5, "━━━ System Stats ━━━", headerStyle, null);
-                    ctx.SetString(2, 6, "CPU:", statLabelStyle, null);
-                    ctx.SetString(7, 6, $"{random.Next(10, 60),3}%", statValueStyle, null);
-                    ctx.SetString(14, 6, "Memory:", statLabelStyle, null);
-                    ctx.SetString(22, 6, $"{random.Next(200, 400),3}MB", statValueStyle, null);
-                    ctx.SetString(30, 6, "Frame:", statLabelStyle, null);
-                    ctx.SetString(37, 6, $"{frame + 1,2}/{frames}", statValueStyle, null);
-
-                    // Log section
-                    ctx.SetString(2, 8, "━━━ Activity Log ━━━", headerStyle, null);
-                    int logY = 9;
-                    foreach (var log in logs)
-                    {
-                        if (logY < size.Height - 2)
-                            ctx.SetString(2, logY++, log, logStyle, size.Width - 4);
-                    }
-
-                    // Footer with elapsed time and terminal info
-                    var footer = $" {size.Width}x{size.Height} │ {elapsed.TotalMilliseconds:F1}ms │ {DateTime.Now:HH:mm:ss} ";
-                    ctx.SetString(size.Width - footer.Length - 1, size.Height - 1, footer, footerStyle, null);
-                });
-
-                Thread.Sleep(33); // ~30fps
-            }
-
-            AnsiConsole.MarkupLine("[green]TUI demo completed![/]");
+            AnsiConsole.MarkupLine("[grey]Spectre.Tui requires direct terminal access.[/]");
+            AnsiConsole.MarkupLine("[grey]For browser environments, use Spectre.Console (Live, Layout, etc.)[/]");
             """
     };
 
