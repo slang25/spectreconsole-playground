@@ -388,52 +388,96 @@
             """,
 
         ["TUI App (Spectre.Tui)"] = """
-            // Spectre.Tui - Direct Terminal Rendering API
-            // Note: Requires a real terminal - won't run in browser/WASM
+            // Spectre.Tui - Real TUI rendering in the browser!
+            // Uses a custom ITerminal implementation for WASM compatibility
 
-            AnsiConsole.MarkupLine("[bold cyan]Spectre.Tui API Reference[/]");
-            AnsiConsole.WriteLine();
+            // Browser-compatible ITerminal implementation
+            var terminal = new BrowserTerminal(AnsiConsole.Console, AnsiConsole.Profile.Width, AnsiConsole.Profile.Height);
+            var renderer = new Renderer(terminal);
+            renderer.SetTargetFps(30);
 
-            // Show the public types available
-            var typesTable = new Table().Border(TableBorder.Rounded);
-            typesTable.AddColumn("[yellow]Type[/]");
-            typesTable.AddColumn("[yellow]Description[/]");
-            typesTable.AddRow("[cyan]Terminal[/]", "Factory for creating terminal instances");
-            typesTable.AddRow("[cyan]Renderer[/]", "Manages drawing frames to terminal");
-            typesTable.AddRow("[cyan]RenderContext[/]", "Drawing surface with SetString, SetSymbol, etc.");
-            typesTable.AddRow("[cyan]Appearance[/]", "Style with Foreground, Background, Decoration");
-            typesTable.AddRow("[cyan]FullscreenMode[/]", "Fullscreen terminal mode");
-            typesTable.AddRow("[cyan]InlineMode[/]", "Inline rendering mode (fixed height)");
-            typesTable.AddRow("[cyan]Size, Position[/]", "Geometry types");
-            typesTable.AddRow("[cyan]Cell, TextSpan[/]", "Low-level text primitives");
-            AnsiConsole.Write(typesTable);
-            AnsiConsole.WriteLine();
+            // Define styles using Appearance
+            var borderStyle = new Appearance { Foreground = Color.Blue };
+            var titleStyle = new Appearance { Foreground = Color.Yellow, Decoration = Decoration.Bold };
+            var headerStyle = new Appearance { Foreground = Color.Cyan };
+            var progressStyle = new Appearance { Foreground = Color.Green };
+            var statStyle = new Appearance { Foreground = Color.White };
+            var logStyle = new Appearance { Foreground = Color.Grey };
 
-            // Show example code
-            AnsiConsole.MarkupLine("[bold yellow]Example Usage:[/]");
-            var code = "// Create terminal in fullscreen mode\n" +
-                "using var terminal = Terminal.Create(new FullscreenMode());\n" +
-                "var renderer = new Renderer(terminal);\n" +
-                "renderer.SetTargetFps(30);\n\n" +
-                "// Define styles\n" +
-                "var style = new Appearance {\n" +
-                "    Foreground = Color.Cyan,\n" +
-                "    Decoration = Decoration.Bold\n" +
-                "};\n\n" +
-                "// Render loop\n" +
-                "renderer.Draw((ctx, elapsed) => {\n" +
-                "    var size = terminal.GetSize();\n" +
-                "    ctx.SetString(0, 0, \"Hello TUI!\", style, null);\n" +
-                "});";
-            var codePanel = new Panel(code)
-                .Header("[green]Spectre.Tui Code[/]")
-                .Border(BoxBorder.Rounded)
-                .BorderStyle(Style.Parse("green"));
-            AnsiConsole.Write(codePanel);
-            AnsiConsole.WriteLine();
+            var frames = 60;
+            var spinChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+            var random = new Random();
+            var logs = new Queue<string>();
+            var logMsgs = new[] { "Request received", "Processing", "Cache hit", "Query done", "Response sent" };
 
-            AnsiConsole.MarkupLine("[grey]Spectre.Tui requires direct terminal access.[/]");
-            AnsiConsole.MarkupLine("[grey]For browser environments, use Spectre.Console (Live, Layout, etc.)[/]");
+            for (int frame = 0; frame < frames; frame++)
+            {
+                if (frame % 5 == 0)
+                {
+                    logs.Enqueue($"{DateTime.Now:HH:mm:ss} {logMsgs[random.Next(logMsgs.Length)]}");
+                    if (logs.Count > 5) logs.Dequeue();
+                }
+
+                renderer.Draw((RenderContext ctx, TimeSpan elapsed) =>
+                {
+                    var size = terminal.GetSize();
+
+                    // Border
+                    ctx.SetString(0, 0, "╭" + new string('─', size.Width - 2) + "╮", borderStyle, null);
+                    for (int y = 1; y < size.Height - 1; y++)
+                    {
+                        ctx.SetString(0, y, "│", borderStyle, null);
+                        ctx.SetString(size.Width - 1, y, "│", borderStyle, null);
+                    }
+                    ctx.SetString(0, size.Height - 1, "╰" + new string('─', size.Width - 2) + "╯", borderStyle, null);
+
+                    // Title
+                    var title = " Spectre.Tui in Browser! ";
+                    ctx.SetString((size.Width - title.Length) / 2, 0, title, titleStyle, null);
+
+                    // Progress
+                    var spinner = spinChars[frame % spinChars.Length];
+                    var progress = (frame * 100) / frames;
+                    var barW = Math.Min(25, size.Width - 15);
+                    var filled = (progress * barW) / 100;
+                    ctx.SetString(2, 2, $"{spinner} [{new string('█', filled)}{new string('░', barW - filled)}] {progress}%", progressStyle, null);
+
+                    // Stats
+                    ctx.SetString(2, 4, $"Frame: {frame + 1}/{frames}  Elapsed: {elapsed.TotalMilliseconds:F1}ms", statStyle, null);
+
+                    // Logs
+                    ctx.SetString(2, 6, "─── Activity ───", headerStyle, null);
+                    int y = 7;
+                    foreach (var log in logs)
+                        if (y < size.Height - 2) ctx.SetString(2, y++, log, logStyle, size.Width - 4);
+                });
+
+                Thread.Sleep(33);
+            }
+
+            AnsiConsole.MarkupLine("[green]TUI demo completed![/]");
+
+            // Browser-compatible ITerminal implementation
+            class BrowserTerminal : ITerminal
+            {
+                private readonly IAnsiConsole _console;
+                private readonly int _w, _h;
+                public BrowserTerminal(IAnsiConsole c, int w, int h) { _console = c; _w = w; _h = h; }
+                public void Clear() => _console.Profile.Out.Writer.Write("\x1b[2J\x1b[H");
+                public Spectre.Tui.Size GetSize() => new(_w, _h);
+                public void MoveTo(int x, int y) => _console.Profile.Out.Writer.Write($"\x1b[{y + 1};{x + 1}H");
+                public void Write(Cell cell)
+                {
+                    var w = _console.Profile.Out.Writer;
+                    var codes = new List<int> { 0 };
+                    if (cell.Foreground != Color.Default) { codes.AddRange(new[] { 38, 2, cell.Foreground.R, cell.Foreground.G, cell.Foreground.B }); }
+                    if (cell.Background != Color.Default) { codes.AddRange(new[] { 48, 2, cell.Background.R, cell.Background.G, cell.Background.B }); }
+                    if ((cell.Decoration & Decoration.Bold) != 0) codes.Add(1);
+                    w.Write($"\x1b[{string.Join(";", codes)}m{cell.Symbol ?? " "}\x1b[0m");
+                }
+                public void Flush() => _console.Profile.Out.Writer.Flush();
+                public void Dispose() { }
+            }
             """
     };
 
