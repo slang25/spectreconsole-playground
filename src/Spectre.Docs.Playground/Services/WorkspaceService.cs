@@ -70,6 +70,7 @@ public class WorkspaceService
         global using System.Threading;
         global using System.Threading.Tasks;
         global using Spectre.Console;
+        global using Spectre.Tui;
         """;
 
     public WorkspaceService(HttpClient httpClient)
