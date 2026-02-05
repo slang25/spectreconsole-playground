@@ -116,6 +116,11 @@ public class WorkspaceService
                             bytes,
                             documentation: xmlDocProvider);
                         _references.Add(reference);
+                        System.Console.WriteLine($"Loaded assembly {assemblyName} ({bytes.Length} bytes)");
+                    }
+                    else
+                    {
+                        System.Console.WriteLine($"Assembly {assemblyName} not found or invalid");
                     }
                 }
                 catch (Exception ex)
