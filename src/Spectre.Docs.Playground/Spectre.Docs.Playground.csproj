@@ -79,6 +79,14 @@
 
 
   <!-- Copy static web assets manifest to wwwroot for Roslyn assembly resolution -->
+  <Target Name="CopyAssetManifestBuild" AfterTargets="Build">
+    <Copy
+      SourceFiles="$(OutputPath)$(AssemblyName).staticwebassets.endpoints.json"
+      DestinationFiles="$(OutputPath)wwwroot/_framework/asset-manifest.json"
+      SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied asset manifest to wwwroot/_framework/asset-manifest.json" />
+  </Target>
+
   <Target Name="CopyAssetManifest" AfterTargets="Publish">
     <Copy
       SourceFiles="$(PublishDir)$(AssemblyName).staticwebassets.endpoints.json"
