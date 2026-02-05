@@ -389,9 +389,8 @@
 
         ["TUI App (Spectre.Tui)"] = """
             // Spectre.Tui - Real TUI rendering in the browser!
-            // Uses a custom ITerminal implementation for WASM compatibility
+            // BrowserTerminal bridges Spectre.Tui to the web terminal
 
-            // Browser-compatible ITerminal implementation
             var terminal = new BrowserTerminal(AnsiConsole.Console, AnsiConsole.Profile.Width, AnsiConsole.Profile.Height);
             var renderer = new Renderer(terminal);
             renderer.SetTargetFps(30);
@@ -421,24 +420,25 @@
                 renderer.Draw((RenderContext ctx, TimeSpan elapsed) =>
                 {
                     var size = terminal.GetSize();
+                    int w = size.Width, h = size.Height;
 
                     // Border
-                    ctx.SetString(0, 0, "╭" + new string('─', size.Width - 2) + "╮", borderStyle, null);
-                    for (int y = 1; y < size.Height - 1; y++)
+                    ctx.SetString(0, 0, "╭" + new string('─', w - 2) + "╮", borderStyle, null);
+                    for (int row = 1; row < h - 1; row++)
                     {
-                        ctx.SetString(0, y, "│", borderStyle, null);
-                        ctx.SetString(size.Width - 1, y, "│", borderStyle, null);
+                        ctx.SetString(0, row, "│", borderStyle, null);
+                        ctx.SetString(w - 1, row, "│", borderStyle, null);
                     }
-                    ctx.SetString(0, size.Height - 1, "╰" + new string('─', size.Width - 2) + "╯", borderStyle, null);
+                    ctx.SetString(0, h - 1, "╰" + new string('─', w - 2) + "╯", borderStyle, null);
 
                     // Title
                     var title = " Spectre.Tui in Browser! ";
-                    ctx.SetString((size.Width - title.Length) / 2, 0, title, titleStyle, null);
+                    ctx.SetString((w - title.Length) / 2, 0, title, titleStyle, null);
 
                     // Progress
                     var spinner = spinChars[frame % spinChars.Length];
                     var progress = (frame * 100) / frames;
-                    var barW = Math.Min(25, size.Width - 15);
+                    var barW = Math.Min(25, w - 15);
                     var filled = (progress * barW) / 100;
                     ctx.SetString(2, 2, $"{spinner} [{new string('█', filled)}{new string('░', barW - filled)}] {progress}%", progressStyle, null);
 
@@ -447,37 +447,15 @@
 
                     // Logs
                     ctx.SetString(2, 6, "─── Activity ───", headerStyle, null);
-                    int y = 7;
+                    int logRow = 7;
                     foreach (var log in logs)
-                        if (y < size.Height - 2) ctx.SetString(2, y++, log, logStyle, size.Width - 4);
+                        if (logRow < h - 2) ctx.SetString(2, logRow++, log, logStyle, w - 4);
                 });
 
                 Thread.Sleep(33);
             }
 
             AnsiConsole.MarkupLine("[green]TUI demo completed![/]");
-
-            // Browser-compatible ITerminal implementation
-            class BrowserTerminal : ITerminal
-            {
-                private readonly IAnsiConsole _console;
-                private readonly int _w, _h;
-                public BrowserTerminal(IAnsiConsole c, int w, int h) { _console = c; _w = w; _h = h; }
-                public void Clear() => _console.Profile.Out.Writer.Write("\x1b[2J\x1b[H");
-                public Spectre.Tui.Size GetSize() => new(_w, _h);
-                public void MoveTo(int x, int y) => _console.Profile.Out.Writer.Write($"\x1b[{y + 1};{x + 1}H");
-                public void Write(Cell cell)
-                {
-                    var w = _console.Profile.Out.Writer;
-                    var codes = new List<int> { 0 };
-                    if (cell.Foreground != Color.Default) { codes.AddRange(new[] { 38, 2, cell.Foreground.R, cell.Foreground.G, cell.Foreground.B }); }
-                    if (cell.Background != Color.Default) { codes.AddRange(new[] { 48, 2, cell.Background.R, cell.Background.G, cell.Background.B }); }
-                    if ((cell.Decoration & Decoration.Bold) != 0) codes.Add(1);
-                    w.Write($"\x1b[{string.Join(";", codes)}m{cell.Symbol ?? " "}\x1b[0m");
-                }
-                public void Flush() => _console.Profile.Out.Writer.Flush();
-                public void Dispose() { }
-            }
             """
     };
 
