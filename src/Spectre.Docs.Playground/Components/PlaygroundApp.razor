@@ -389,26 +389,41 @@
 
         ["TUI App (Preview)"] = """
             // Spectre.Tui - Text User Interface library (Preview)
-            // Note: Full TUI apps require terminal input handling.
-            // This example shows the basic App structure.
+            // This library provides low-level TUI primitives for building
+            // terminal user interfaces.
 
             AnsiConsole.MarkupLine("[blue]Spectre.Tui[/] types are available!");
             AnsiConsole.WriteLine();
 
-            // Show that we can reference the App type
-            AnsiConsole.MarkupLine($"App base type: [green]{typeof(App).BaseType?.Name}[/]");
-            AnsiConsole.MarkupLine($"View type: [green]{typeof(View).Name}[/]");
+            // Show available TUI types
+            AnsiConsole.MarkupLine($"Terminal type: [green]{typeof(Spectre.Tui.Terminal).Name}[/]");
+            AnsiConsole.MarkupLine($"IWidget interface: [green]{typeof(Spectre.Tui.IWidget).Name}[/]");
+            AnsiConsole.MarkupLine($"RenderContext: [green]{typeof(Spectre.Tui.RenderContext).Name}[/]");
             AnsiConsole.WriteLine();
 
-            // Create a simple panel to show the library is working
+            // Show some TUI primitives
+            var table = new Table().Border(TableBorder.Rounded);
+            table.AddColumn("[cyan]Type[/]");
+            table.AddColumn("[cyan]Description[/]");
+
+            table.AddRow("Terminal", "Core terminal abstraction");
+            table.AddRow("IWidget", "Interface for TUI widgets");
+            table.AddRow("RenderContext", "Context for rendering widgets");
+            table.AddRow("Cell", "Single terminal cell with character and style");
+            table.AddRow("TextSpan", "Styled text span for rendering");
+            table.AddRow("Position/Size/Rectangle", "Layout primitives");
+
+            AnsiConsole.Write(table);
+            AnsiConsole.WriteLine();
+
+            // Note about the preview status
             var panel = new Panel(
-                new Markup("[green]Spectre.Tui[/] is ready for TUI development!\n\n" +
-                    "[grey]The App class provides the foundation for\n" +
-                    "building terminal user interfaces.[/]"))
-                .Header("[blue]TUI Library Loaded[/]")
-                .Border(BoxBorder.Double)
-                .BorderStyle(Style.Parse("cyan"))
-                .Padding(2, 1);
+                new Markup("[yellow]Note:[/] Spectre.Tui is in early preview.\n" +
+                    "The App and View classes shown in documentation\n" +
+                    "are not yet public in the NuGet package."))
+                .Header("[blue]Preview Status[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderStyle(Style.Parse("yellow"));
 
             AnsiConsole.Write(panel);
             """
