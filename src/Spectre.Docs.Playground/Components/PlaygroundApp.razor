@@ -388,36 +388,43 @@
             """,
 
         ["TUI App (Spectre.Tui)"] = """
-            // Spectre.Tui - Real TUI rendering in the browser!
-            // BrowserTerminal bridges Spectre.Tui to the web terminal
+            // Service Monitor - Built with Spectre.Tui
+            // Low-level TUI rendering with Renderer and RenderContext
 
             var terminal = new BrowserTerminal(AnsiConsole.Console, AnsiConsole.Profile.Width, AnsiConsole.Profile.Height);
             var renderer = new Renderer(terminal);
-            renderer.SetTargetFps(30);
+            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25l"); // Hide cursor
 
-            // Hide cursor during TUI rendering
-            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25l");
+            // Styles
+            var dim = new Appearance { Foreground = Color.Grey };
+            var normal = new Appearance { Foreground = Color.White };
+            var accent = new Appearance { Foreground = Color.Cyan };
+            var good = new Appearance { Foreground = Color.Green };
+            var warn = new Appearance { Foreground = Color.Yellow };
+            var bad = new Appearance { Foreground = Color.Red };
 
-            // Define styles using Appearance
-            var borderStyle = new Appearance { Foreground = Color.Blue };
-            var titleStyle = new Appearance { Foreground = Color.Yellow, Decoration = Decoration.Bold };
-            var headerStyle = new Appearance { Foreground = Color.Cyan };
-            var progressStyle = new Appearance { Foreground = Color.Green };
-            var statStyle = new Appearance { Foreground = Color.White };
-            var logStyle = new Appearance { Foreground = Color.Grey };
-
-            var frames = 60;
-            var spinChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
             var random = new Random();
-            var logs = new Queue<string>();
-            var logMsgs = new[] { "Request received", "Processing", "Cache hit", "Query done", "Response sent" };
+            var events = new Queue<(string time, string msg, Appearance style)>();
+            var services = new[] {
+                ("api-gateway", 99.8, 124),
+                ("auth-service", 99.9, 45),
+                ("user-db", 99.5, 230),
+                ("cache-redis", 100.0, 2),
+                ("queue-worker", 98.2, 890)
+            };
 
-            for (int frame = 0; frame < frames; frame++)
+            for (int tick = 0; tick < 100; tick++)
             {
-                if (frame % 5 == 0)
+                // Simulate events
+                if (tick % 8 == 0)
                 {
-                    logs.Enqueue($"{DateTime.Now:HH:mm:ss} {logMsgs[random.Next(logMsgs.Length)]}");
-                    if (logs.Count > 5) logs.Dequeue();
+                    var msgs = new[] {
+                        ("Request handled", good), ("Cache miss", warn), ("Connection opened", normal),
+                        ("Query executed", normal), ("Auth token refreshed", good), ("Rate limit hit", warn)
+                    };
+                    var (msg, style) = msgs[random.Next(msgs.Length)];
+                    events.Enqueue((DateTime.Now.ToString("HH:mm:ss"), msg, style));
+                    if (events.Count > 6) events.Dequeue();
                 }
 
                 renderer.Draw((RenderContext ctx, TimeSpan elapsed) =>
@@ -425,41 +432,53 @@
                     var size = terminal.GetSize();
                     int w = size.Width, h = size.Height;
 
-                    // Border
-                    ctx.SetString(0, 0, "╭" + new string('─', w - 2) + "╮", borderStyle, null);
-                    for (int row = 1; row < h - 1; row++)
+                    // Header
+                    ctx.SetString(1, 0, "SERVICE MONITOR", accent, null);
+                    ctx.SetString(w - 9, 0, DateTime.Now.ToString("HH:mm:ss"), dim, null);
+
+                    // Services section
+                    ctx.SetString(1, 2, "Services", normal, null);
+                    ctx.SetString(1, 3, new string('─', w - 2), dim, null);
+
+                    int row = 4;
+                    foreach (var (name, uptime, latency) in services)
                     {
-                        ctx.SetString(0, row, "│", borderStyle, null);
-                        ctx.SetString(w - 1, row, "│", borderStyle, null);
+                        var jitter = random.Next(-20, 21);
+                        var currentLatency = Math.Max(1, latency + jitter);
+                        var status = currentLatency < 100 ? good : currentLatency < 500 ? warn : bad;
+                        var icon = currentLatency < 100 ? "●" : currentLatency < 500 ? "◐" : "○";
+
+                        ctx.SetString(2, row, icon, status, null);
+                        ctx.SetString(4, row, name.PadRight(14), normal, null);
+                        ctx.SetString(19, row, $"{uptime:F1}%", uptime > 99 ? good : warn, null);
+                        ctx.SetString(26, row, $"{currentLatency,4}ms", status, null);
+                        row++;
                     }
-                    ctx.SetString(0, h - 1, "╰" + new string('─', w - 2) + "╯", borderStyle, null);
 
-                    // Title
-                    var title = " Spectre.Tui in Browser! ";
-                    ctx.SetString((w - title.Length) / 2, 0, title, titleStyle, null);
+                    // Events section
+                    ctx.SetString(1, row + 1, "Recent Events", normal, null);
+                    ctx.SetString(1, row + 2, new string('─', w - 2), dim, null);
 
-                    // Progress
-                    var spinner = spinChars[frame % spinChars.Length];
-                    var progress = (frame * 100) / frames;
-                    var barW = Math.Min(25, w - 15);
-                    var filled = (progress * barW) / 100;
-                    ctx.SetString(2, 2, $"{spinner} [{new string('█', filled)}{new string('░', barW - filled)}] {progress}%", progressStyle, null);
+                    int eventRow = row + 3;
+                    foreach (var (time, msg, style) in events)
+                    {
+                        if (eventRow < h - 1)
+                        {
+                            ctx.SetString(2, eventRow, time, dim, null);
+                            ctx.SetString(11, eventRow, msg, style, w - 13);
+                            eventRow++;
+                        }
+                    }
 
-                    // Stats
-                    ctx.SetString(2, 4, $"Frame: {frame + 1}/{frames}  Elapsed: {elapsed.TotalMilliseconds:F1}ms", statStyle, null);
-
-                    // Logs
-                    ctx.SetString(2, 6, "─── Activity ───", headerStyle, null);
-                    int logRow = 7;
-                    foreach (var log in logs)
-                        if (logRow < h - 2) ctx.SetString(2, logRow++, log, logStyle, w - 4);
+                    // Footer
+                    ctx.SetString(1, h - 1, $"Frame {tick + 1}/100", dim, null);
+                    ctx.SetString(w - 12, h - 1, $"{elapsed.TotalMilliseconds:F1}ms/frame", dim, null);
                 });
 
-                Thread.Sleep(33);
+                Thread.Sleep(50);
             }
 
-            // Show cursor again
-            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25h");
+            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25h"); // Show cursor
             """
     };
 
