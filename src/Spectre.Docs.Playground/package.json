@@ -14,7 +14,7 @@
   "type": "commonjs",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.18",
-    "@slang25/ghostty-web": "^0.4.0",
+    "@slang25/ghostty-web": "^0.4.1",
     "tailwindcss": "^4.1.18"
   }
 }

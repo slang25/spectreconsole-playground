@@ -2141,7 +2141,7 @@ class QA {
     this.stopCursorBlink();
   }
 }
-const S = class l {
+const S = class R {
   // ms between scroll steps
   constructor(A, Q, B, E) {
     this.selectionStart = null, this.selectionEnd = null, this.isSelecting = !1, this.mouseDownTarget = null, this.mouseButtonsPressed = /* @__PURE__ */ new Set(), this.dirtySelectionRows = /* @__PURE__ */ new Set(), this.selectionChangedEmitter = new n(), this.boundMouseUpHandler = null, this.boundContextMenuHandler = null, this.boundClickHandler = null, this.boundDocumentMouseMoveHandler = null, this.autoScrollInterval = null, this.autoScrollDirection = 0, this.terminal = A, this.renderer = Q, this.wasmTerm = B, this.textarea = E, this.attachEventListeners();
@@ -2462,7 +2462,7 @@ const S = class l {
       }
       if (B !== null && this.mouseButtonsPressed.delete(B), this.isSelecting) {
         if (this.isSelecting = !1, this.stopAutoScroll(), this.selectionStart && this.selectionEnd && this.selectionStart.col === this.selectionEnd.col && this.selectionStart.absoluteRow === this.selectionEnd.absoluteRow) {
-          this.selectionStart = null, this.selectionEnd = null;
+          this.clearSelection();
           return;
         }
         const E = this.getSelection();
@@ -2536,7 +2536,7 @@ const S = class l {
    * Update auto-scroll based on mouse Y position within canvas
    */
   updateAutoScroll(A, Q) {
-    const B = l.AUTO_SCROLL_EDGE_SIZE;
+    const B = R.AUTO_SCROLL_EDGE_SIZE;
     A < B ? this.startAutoScroll(-1) : A > Q - B ? this.startAutoScroll(1) : this.stopAutoScroll();
   }
   /**
@@ -2548,7 +2548,7 @@ const S = class l {
         this.stopAutoScroll();
         return;
       }
-      const Q = l.AUTO_SCROLL_SPEED * this.autoScrollDirection;
+      const Q = R.AUTO_SCROLL_SPEED * this.autoScrollDirection;
       if (this.terminal.scrollLines(Q), this.selectionEnd) {
         const B = this.wasmTerm.getDimensions();
         if (this.autoScrollDirection < 0) {
@@ -2560,7 +2560,7 @@ const S = class l {
         }
       }
       this.requestRender();
-    }, l.AUTO_SCROLL_INTERVAL));
+    }, R.AUTO_SCROLL_INTERVAL));
   }
   /**
    * Stop auto-scrolling
@@ -3726,12 +3726,12 @@ class wA {
     }), this._resizeObserver.observe(this._terminal.element)));
   }
 }
-let R = null;
+let l = null;
 async function sA() {
-  R || (R = await Y.load());
+  l || (l = await Y.load());
 }
 function oA() {
-  if (!R)
+  if (!l)
     throw new Error(
       `ghostty-web not initialized. Call init() before creating Terminal instances.
 Example:
@@ -3744,7 +3744,7 @@ For tests, pass a Ghostty instance directly:
   const ghostty = await Ghostty.load();
   const term = new Terminal({ ghostty });`
     );
-  return R;
+  return l;
 }
 export {
   QA as CanvasRenderer,

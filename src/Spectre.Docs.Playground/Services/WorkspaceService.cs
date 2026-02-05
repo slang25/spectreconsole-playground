@@ -37,7 +37,9 @@ public class WorkspaceService
         "System.ObjectModel",
         "System.Runtime.InteropServices",
         "netstandard",
-        "Spectre.Console"
+        "Spectre.Console",
+        "Spectre.Console.Ansi",
+        "Spectre.Tui"
     ];
 
     private static readonly Dictionary<string, string> SpectrePackageXmlFiles = new()
@@ -68,6 +70,49 @@ public class WorkspaceService
         global using System.Threading;
         global using System.Threading.Tasks;
         global using Spectre.Console;
+        global using Spectre.Tui;
+        """;
+
+    // BrowserTerminal helper class for Spectre.Tui support in WASM
+    public const string BrowserTerminalHelper =
+        """
+        /// <summary>
+        /// Browser-compatible ITerminal implementation for Spectre.Tui.
+        /// Enables TUI rendering in WASM by bridging to AnsiConsole output.
+        /// </summary>
+        public class BrowserTerminal : Spectre.Tui.ITerminal
+        {
+            private readonly IAnsiConsole _console;
+            private readonly int _width, _height;
+
+            public BrowserTerminal(IAnsiConsole console, int width, int height)
+            {
+                _console = console;
+                _width = width;
+                _height = height;
+            }
+
+            public void Clear() => _console.Profile.Out.Writer.Write("\x1b[2J\x1b[H");
+            public Spectre.Tui.Size GetSize() => new(_width, _height);
+            public void MoveTo(int x, int y) => _console.Profile.Out.Writer.Write($"\x1b[{y + 1};{x + 1}H");
+
+            public void Write(Spectre.Tui.Cell cell)
+            {
+                var w = _console.Profile.Out.Writer;
+                var codes = new System.Collections.Generic.List<int> { 0 };
+                if (cell.Foreground != Color.Default)
+                    codes.AddRange(new[] { 38, 2, cell.Foreground.R, cell.Foreground.G, cell.Foreground.B });
+                if (cell.Background != Color.Default)
+                    codes.AddRange(new[] { 48, 2, cell.Background.R, cell.Background.G, cell.Background.B });
+                if ((cell.Decoration & Decoration.Bold) != 0) codes.Add(1);
+                if ((cell.Decoration & Decoration.Italic) != 0) codes.Add(3);
+                if ((cell.Decoration & Decoration.Underline) != 0) codes.Add(4);
+                w.Write($"\x1b[{string.Join(";", codes)}m{cell.Symbol ?? " "}\x1b[0m");
+            }
+
+            public void Flush() => _console.Profile.Out.Writer.Flush();
+            public void Dispose() { }
+        }
         """;
 
     public WorkspaceService(HttpClient httpClient)
@@ -113,6 +158,11 @@ public class WorkspaceService
                             bytes,
                             documentation: xmlDocProvider);
                         _references.Add(reference);
+                        System.Console.WriteLine($"Loaded assembly {assemblyName} ({bytes.Length} bytes)");
+                    }
+                    else
+                    {
+                        System.Console.WriteLine($"Assembly {assemblyName} not found or invalid");
                     }
                 }
                 catch (Exception ex)
@@ -158,6 +208,9 @@ public class WorkspaceService
         // Add global usings as a separate document
         _workspace.AddDocument(project.Id, "GlobalUsings.cs", SourceText.From(GlobalUsings));
 
+        // Add BrowserTerminal helper for Spectre.Tui support
+        _workspace.AddDocument(project.Id, "BrowserTerminal.cs", SourceText.From(BrowserTerminalHelper));
+
         // Add the user's code as the main document
         var sourceText = SourceText.From(code);
         var document = _workspace.AddDocument(project.Id, "Program.cs", sourceText);
@@ -180,6 +233,11 @@ public class WorkspaceService
             parseOptions,
             path: "GlobalUsings.cs");
 
+        var browserTerminalSyntaxTree = CSharpSyntaxTree.ParseText(
+            BrowserTerminalHelper,
+            parseOptions,
+            path: "BrowserTerminal.cs");
+
         var codeSyntaxTree = CSharpSyntaxTree.ParseText(
             code,
             parseOptions,
@@ -187,7 +245,7 @@ public class WorkspaceService
 
         return CSharpCompilation.Create(
             $"PlaygroundAssembly_{Guid.NewGuid():N}",
-            [globalUsingsSyntaxTree, codeSyntaxTree],
+            [globalUsingsSyntaxTree, browserTerminalSyntaxTree, codeSyntaxTree],
             _references,
             new CSharpCompilationOptions(OutputKind.ConsoleApplication)
                 .WithOptimizationLevel(OptimizationLevel.Release)

@@ -18,13 +18,13 @@ public class TerminalConsole : IAnsiConsole
     public TerminalConsole(ITerminalBridge bridge, int width = 80, int height = 24)
     {
         _bridge = bridge;
-        Profile = new Profile(new TerminalOutput(_bridge, width, height), Encoding.UTF8)
+        var capabilities = new Capabilities
         {
-            Width = width, Height = height, Capabilities =
-            {
-                Ansi = true, Links = false, Legacy = false, Interactive = true,
-                Unicode = true
-            }
+            Ansi = true, Links = false, Interactive = true, Unicode = true
+        };
+        Profile = new Profile(new TerminalOutput(_bridge, width, height), capabilities, Encoding.UTF8)
+        {
+            Width = width, Height = height
         };
 
         Input = new TerminalInput(_bridge);
@@ -64,7 +64,7 @@ public class TerminalConsole : IAnsiConsole
                 {
                     if (segment.IsControlCode)
                     {
-                        WriteAnsi(segment.Text);
+                        WriteAnsiCode(segment.Text);
                     }
                     else
                     {
@@ -72,6 +72,15 @@ public class TerminalConsole : IAnsiConsole
                     }
                 }
             }
+        }
+    }
+
+    public void WriteAnsi(Action<AnsiWriter> action)
+    {
+        lock (_lock)
+        {
+            var writer = new AnsiWriter(Profile.Out.Writer);
+            action(writer);
         }
     }
 
@@ -111,7 +120,7 @@ public class TerminalConsole : IAnsiConsole
         }
     }
 
-    private void WriteAnsi(string ansi)
+    private void WriteAnsiCode(string ansi)
     {
         _bridge.WriteOutput(ansi);
     }
