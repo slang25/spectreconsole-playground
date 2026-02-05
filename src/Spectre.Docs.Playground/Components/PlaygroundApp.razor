@@ -395,6 +395,9 @@
             var renderer = new Renderer(terminal);
             renderer.SetTargetFps(30);
 
+            // Hide cursor during TUI rendering
+            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25l");
+
             // Define styles using Appearance
             var borderStyle = new Appearance { Foreground = Color.Blue };
             var titleStyle = new Appearance { Foreground = Color.Yellow, Decoration = Decoration.Bold };
@@ -455,7 +458,8 @@
                 Thread.Sleep(33);
             }
 
-            AnsiConsole.MarkupLine("[green]TUI demo completed![/]");
+            // Show cursor again
+            AnsiConsole.Profile.Out.Writer.Write("\x1b[?25h");
             """
     };
 
