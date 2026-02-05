@@ -344,7 +344,7 @@ export async function startTerminal(containerId) {
         cursorStyle: 'block',
         cursorInactiveStyle: 'outline',
         fontSize: 18,
-        fontFamily: '"Cascadia Code", "Fira Code", Consolas, monospace',
+        fontFamily: '"JetBrainsMono NF", Monaco, Menlo, "Courier New", monospace',
         theme: {
             background: '#1e1e1e',
             foreground: '#abb2bf',
@@ -373,6 +373,10 @@ export async function startTerminal(containerId) {
     fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(containerElement);
+
+    // Wait for JetBrainsMono NF font to load before measuring
+    await document.fonts.load('14px "JetBrainsMono NF"');
+    terminal.loadFonts();
 
     // Fit after a brief delay
     setTimeout(() => fitAddon.fit(), 100);
