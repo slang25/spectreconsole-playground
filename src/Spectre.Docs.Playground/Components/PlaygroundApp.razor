@@ -424,7 +424,7 @@
                     if (logs.Count > 6) logs.Dequeue();
                 }
 
-                renderer.Draw((RenderContext ctx, Size size) =>
+                renderer.Draw((RenderContext ctx, Spectre.Tui.Size size) =>
                 {
                     // Draw styled border using SetString with Appearance
                     ctx.SetString(0, 0, "╭" + new string('─', Math.Max(0, size.Width - 2)) + "╮", borderStyle, null);
