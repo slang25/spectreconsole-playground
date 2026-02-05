@@ -424,8 +424,11 @@
                     if (logs.Count > 6) logs.Dequeue();
                 }
 
-                renderer.Draw((RenderContext ctx, Spectre.Tui.Size size) =>
+                renderer.Draw((RenderContext ctx, TimeSpan elapsed) =>
                 {
+                    // Get terminal size from the terminal instance
+                    var size = terminal.GetSize();
+
                     // Draw styled border using SetString with Appearance
                     ctx.SetString(0, 0, "╭" + new string('─', Math.Max(0, size.Width - 2)) + "╮", borderStyle, null);
                     for (int y = 1; y < size.Height - 1; y++)
@@ -468,8 +471,8 @@
                             ctx.SetString(2, logY++, log, logStyle, size.Width - 4);
                     }
 
-                    // Footer with terminal info
-                    var footer = $" {size.Width}x{size.Height} │ {DateTime.Now:HH:mm:ss} ";
+                    // Footer with elapsed time and terminal info
+                    var footer = $" {size.Width}x{size.Height} │ {elapsed.TotalMilliseconds:F1}ms │ {DateTime.Now:HH:mm:ss} ";
                     ctx.SetString(size.Width - footer.Length - 1, size.Height - 1, footer, footerStyle, null);
                 });
 
