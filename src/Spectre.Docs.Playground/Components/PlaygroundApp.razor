@@ -385,6 +385,41 @@
             AnsiConsole.MarkupLine($"[green]Success![/] {Emoji.Known.CheckMarkButton}");
             AnsiConsole.MarkupLine($"[red]Error![/] {Emoji.Known.CrossMark}");
             AnsiConsole.MarkupLine($"[yellow]Warning![/] {Emoji.Known.Warning}");
+            """,
+
+        ["TUI App (Preview)"] = """
+            // Spectre.Tui - Text User Interface library (Preview)
+            // Create and run a basic TUI application
+
+            using Spectre.Tui;
+
+            var app = new DemoApp();
+            await app.Run();
+
+            // Define the TUI application
+            public sealed class DemoApp : App
+            {
+                protected override void OnStarted()
+                {
+                    AnsiConsole.Clear();
+
+                    var panel = new Panel(
+                        Align.Center(
+                            new Markup("[green]Spectre.Tui[/] is running!\n\n" +
+                                "[grey]Press[/] [yellow]Ctrl+C[/] [grey]to exit[/]"),
+                            VerticalAlignment.Middle))
+                        .Header("[blue]TUI Application[/]")
+                        .Border(BoxBorder.Double)
+                        .BorderStyle(Style.Parse("cyan"))
+                        .Padding(2, 1)
+                        .Expand();
+
+                    AnsiConsole.Write(panel);
+
+                    // Mount the view to start the TUI event loop
+                    View.Mount();
+                }
+            }
             """
     };
 
