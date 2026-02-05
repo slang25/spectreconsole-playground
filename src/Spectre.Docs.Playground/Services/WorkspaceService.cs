@@ -37,7 +37,9 @@ public class WorkspaceService
         "System.ObjectModel",
         "System.Runtime.InteropServices",
         "netstandard",
-        "Spectre.Console"
+        "Spectre.Console",
+        "Spectre.Console.Ansi",
+        "Spectre.Tui"
     ];
 
     private static readonly Dictionary<string, string> SpectrePackageXmlFiles = new()

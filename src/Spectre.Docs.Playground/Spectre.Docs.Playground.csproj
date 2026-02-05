@@ -47,6 +47,7 @@
     <TrimmerRootAssembly Include="System.Runtime.InteropServices" />
     <TrimmerRootAssembly Include="netstandard" />
     <TrimmerRootAssembly Include="Spectre.Console" />
+    <TrimmerRootAssembly Include="Spectre.Console.Ansi" />
     <TrimmerRootAssembly Include="Spectre.Tui" />
   </ItemGroup>
 
