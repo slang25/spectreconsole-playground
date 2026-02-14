@@ -12863,7 +12863,7 @@
             <param name="console">The console to write to.</param>
             <param name="text">The text to write.</param>
         </member>
-        <member name="M:Spectre.Console.AnsiConsoleExtensions.Write(Spectre.Console.IAnsiConsole,System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.AnsiConsoleExtensions.Write(Spectre.Console.IAnsiConsole,System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Writes the specified string value to the console.
             </summary>
@@ -12884,7 +12884,7 @@
             <param name="console">The console to write to.</param>
             <param name="text">The text to write.</param>
         </member>
-        <member name="M:Spectre.Console.AnsiConsoleExtensions.WriteLine(Spectre.Console.IAnsiConsole,System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.AnsiConsoleExtensions.WriteLine(Spectre.Console.IAnsiConsole,System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Writes the specified string value, followed by the current line terminator, to the console.
             </summary>
@@ -12897,7 +12897,7 @@
             Provides extension methods for running tasks with a spinner animation.
             </summary>
         </member>
-        <member name="M:Spectre.Console.SpinnerExtensions.Spinner(System.Threading.Tasks.Task,Spectre.Console.Spinner,Spectre.Console.Style,Spectre.Console.IAnsiConsole)">
+        <member name="M:Spectre.Console.SpinnerExtensions.Spinner(System.Threading.Tasks.Task,Spectre.Console.Spinner,System.Nullable{Spectre.Console.Style},Spectre.Console.IAnsiConsole)">
             <summary>
             Runs a task with a spinner animation.
             </summary>
@@ -12907,7 +12907,7 @@
             <param name="ansiConsole">The console to write to.</param>
             <returns>The result of the task.</returns>
         </member>
-        <member name="M:Spectre.Console.SpinnerExtensions.Spinner``1(System.Threading.Tasks.Task{``0},Spectre.Console.Spinner,Spectre.Console.Style,Spectre.Console.IAnsiConsole)">
+        <member name="M:Spectre.Console.SpinnerExtensions.Spinner``1(System.Threading.Tasks.Task{``0},Spectre.Console.Spinner,System.Nullable{Spectre.Console.Style},Spectre.Console.IAnsiConsole)">
             <summary>
             Runs a task with a spinner animation.
             </summary>
@@ -14462,7 +14462,7 @@
             Contains extension methods for <see cref="T:Spectre.Console.SpinnerColumn"/>.
             </summary>
         </member>
-        <member name="M:Spectre.Console.SpinnerColumnExtensions.Style(Spectre.Console.SpinnerColumn,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.SpinnerColumnExtensions.Style(Spectre.Console.SpinnerColumn,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the style of the spinner.
             </summary>
@@ -14479,7 +14479,7 @@
             <param name="text">The text.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.SpinnerColumnExtensions.CompletedStyle(Spectre.Console.SpinnerColumn,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.SpinnerColumnExtensions.CompletedStyle(Spectre.Console.SpinnerColumn,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the completed style of the spinner.
             </summary>
@@ -15510,7 +15510,7 @@
             <param name="spinner">The spinner.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.StatusExtensions.SpinnerStyle(Spectre.Console.Status,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.StatusExtensions.SpinnerStyle(Spectre.Console.Status,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the spinner style.
             </summary>
@@ -15564,7 +15564,7 @@
             <param name="spinner">The spinner.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.StatusContextExtensions.SpinnerStyle(Spectre.Console.StatusContext,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.StatusContextExtensions.SpinnerStyle(Spectre.Console.StatusContext,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the spinner style.
             </summary>
@@ -15856,7 +15856,7 @@
             <param name="obj">The prompt.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.ConfirmationPromptExtensions.ChoicesStyle(Spectre.Console.ConfirmationPrompt,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.ConfirmationPromptExtensions.ChoicesStyle(Spectre.Console.ConfirmationPrompt,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the style in which the list of choices is displayed.
             </summary>
@@ -15886,7 +15886,7 @@
             <param name="obj">The prompt.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.ConfirmationPromptExtensions.DefaultValueStyle(Spectre.Console.ConfirmationPrompt,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.ConfirmationPromptExtensions.DefaultValueStyle(Spectre.Console.ConfirmationPrompt,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the style in which the default value is displayed.
             </summary>
@@ -16775,7 +16775,7 @@
             <param name="displaySelector">The function to get a display string for a given choice.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.TextPromptExtensions.DefaultValueStyle``1(Spectre.Console.TextPrompt{``0},Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TextPromptExtensions.DefaultValueStyle``1(Spectre.Console.TextPrompt{``0},System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the style in which the default value is displayed.
             </summary>
@@ -16784,7 +16784,7 @@
             <param name="style">The default value style or <see langword="null"/> to use the default style (green).</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.TextPromptExtensions.ChoicesStyle``1(Spectre.Console.TextPrompt{``0},Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TextPromptExtensions.ChoicesStyle``1(Spectre.Console.TextPrompt{``0},System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the style in which the list of choices is displayed.
             </summary>
@@ -17620,6 +17620,11 @@
             Gets the segment style.
             </summary>
         </member>
+        <member name="P:Spectre.Console.Rendering.Segment.Link">
+            <summary>
+            Gets the segment link.
+            </summary>
+        </member>
         <member name="P:Spectre.Console.Rendering.Segment.LineBreak">
             <summary>
             Gets a segment representing a line break.
@@ -17643,12 +17648,13 @@
             </summary>
             <param name="text">The segment text.</param>
         </member>
-        <member name="M:Spectre.Console.Rendering.Segment.#ctor(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Rendering.Segment.#ctor(System.String,Spectre.Console.Style,Spectre.Console.Link)">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.Rendering.Segment"/> class.
             </summary>
             <param name="text">The segment text.</param>
             <param name="style">The segment style.</param>
+            <param name="link">The segment link.</param>
         </member>
         <member name="M:Spectre.Console.Rendering.Segment.Control(System.String)">
             <summary>
@@ -18405,7 +18411,7 @@
             Contains extension methods for <see cref="T:Spectre.Console.Calendar"/>.
             </summary>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.DateTime,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.DateTime,System.Nullable{Spectre.Console.Style})">
             <summary>
             Adds a calendar event.
             </summary>
@@ -18414,7 +18420,7 @@
             <param name="customEventHighlightStyle">The calendar event custom highlight style.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.String,System.DateTime,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.String,System.DateTime,System.Nullable{Spectre.Console.Style})">
             <summary>
             Adds a calendar event.
             </summary>
@@ -18424,7 +18430,7 @@
             <param name="customEventHighlightStyle">The calendar event custom highlight style.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.Int32,System.Int32,System.Int32,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.Int32,System.Int32,System.Int32,System.Nullable{Spectre.Console.Style})">
             <summary>
             Adds a calendar event.
             </summary>
@@ -18435,7 +18441,7 @@
             <param name="customEventHighlightStyle">The calendar event custom highlight style.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.String,System.Int32,System.Int32,System.Int32,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.AddCalendarEvent(Spectre.Console.Calendar,System.String,System.Int32,System.Int32,System.Int32,System.Nullable{Spectre.Console.Style})">
             <summary>
             Adds a calendar event.
             </summary>
@@ -18447,7 +18453,7 @@
             <param name="customEventHighlightStyle">The calendar event custom highlight style.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.HighlightStyle(Spectre.Console.Calendar,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.HighlightStyle(Spectre.Console.Calendar,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the calendar's highlight <see cref="T:Spectre.Console.Style"/>.
             </summary>
@@ -18455,7 +18461,7 @@
             <param name="style">The default highlight style.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.CalendarExtensions.HeaderStyle(Spectre.Console.Calendar,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarExtensions.HeaderStyle(Spectre.Console.Calendar,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the calendar's header <see cref="T:Spectre.Console.Style"/>.
             </summary>
@@ -18507,7 +18513,7 @@
             Gets the custom highlight style of the calendar event.
             </summary>
         </member>
-        <member name="M:Spectre.Console.CalendarEvent.#ctor(System.Int32,System.Int32,System.Int32,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarEvent.#ctor(System.Int32,System.Int32,System.Int32,System.Nullable{Spectre.Console.Style})">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.CalendarEvent"/> class.
             </summary>
@@ -18516,7 +18522,7 @@
             <param name="day">The day of the calendar event.</param>
             <param name="customHighlightStyle">The custom highlight style of the calendar event.</param>
         </member>
-        <member name="M:Spectre.Console.CalendarEvent.#ctor(System.String,System.Int32,System.Int32,System.Int32,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.CalendarEvent.#ctor(System.String,System.Int32,System.Int32,System.Int32,System.Nullable{Spectre.Console.Style})">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.CalendarEvent"/> class.
             </summary>
@@ -19700,7 +19706,7 @@
             Gets the number of lines.
             </summary>
         </member>
-        <member name="M:Spectre.Console.Markup.#ctor(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Markup.#ctor(System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.Markup"/> class.
             </summary>
@@ -19713,7 +19719,7 @@
         <member name="M:Spectre.Console.Markup.Render(Spectre.Console.Rendering.RenderOptions,System.Int32)">
             <inheritdoc/>
         </member>
-        <member name="M:Spectre.Console.Markup.FromInterpolated(System.FormattableString,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Markup.FromInterpolated(System.FormattableString,System.Nullable{Spectre.Console.Style})">
             <summary>
             Returns a new instance of a Markup widget from an interpolated string.
             </summary>
@@ -19721,7 +19727,7 @@
             <param name="style">The style of the text.</param>
             <returns>A new markup instance.</returns>
         </member>
-        <member name="M:Spectre.Console.Markup.FromInterpolated(System.IFormatProvider,System.FormattableString,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Markup.FromInterpolated(System.IFormatProvider,System.FormattableString,System.Nullable{Spectre.Console.Style})">
             <summary>
             Returns a new instance of a Markup widget from an interpolated string.
             </summary>
@@ -19888,7 +19894,7 @@
             <param name="text">The panel header text.</param>
             <param name="alignment">The panel header alignment.</param>
         </member>
-        <member name="M:Spectre.Console.PanelHeader.SetStyle(Spectre.Console.Style)">
+        <member name="M:Spectre.Console.PanelHeader.SetStyle(System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the panel header style.
             </summary>
@@ -19940,19 +19946,21 @@
             Initializes a new instance of the <see cref="T:Spectre.Console.Paragraph"/> class.
             </summary>
         </member>
-        <member name="M:Spectre.Console.Paragraph.#ctor(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Paragraph.#ctor(System.String,System.Nullable{Spectre.Console.Style},Spectre.Console.Link)">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.Paragraph"/> class.
             </summary>
             <param name="text">The text.</param>
             <param name="style">The style of the text or <see cref="P:Spectre.Console.Style.Plain"/> if <see langword="null"/>.</param>
+            <param name="link">The link of the text.</param>
         </member>
-        <member name="M:Spectre.Console.Paragraph.Append(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Paragraph.Append(System.String,System.Nullable{Spectre.Console.Style},Spectre.Console.Link)">
             <summary>
             Appends some text to this paragraph.
             </summary>
             <param name="text">The text to append.</param>
             <param name="style">The style of the appended text or <see cref="P:Spectre.Console.Style.Plain"/> if <see langword="null"/>.</param>
+            <param name="link">The link that the appended text points at.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
         <member name="M:Spectre.Console.Paragraph.Measure(Spectre.Console.Rendering.RenderOptions,System.Int32)">
@@ -20293,7 +20301,7 @@
             <param name="table">The table.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.TableExtensions.Title(Spectre.Console.Table,System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TableExtensions.Title(Spectre.Console.Table,System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the table title.
             </summary>
@@ -20310,7 +20318,7 @@
             <param name="title">The table title.</param>
             <returns>The same instance so that multiple calls can be chained.</returns>
         </member>
-        <member name="M:Spectre.Console.TableExtensions.Caption(Spectre.Console.Table,System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TableExtensions.Caption(Spectre.Console.Table,System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the table caption.
             </summary>
@@ -20536,14 +20544,14 @@
             Gets or sets the title style.
             </summary>
         </member>
-        <member name="M:Spectre.Console.TableTitle.#ctor(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TableTitle.#ctor(System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.TableTitle"/> class.
             </summary>
             <param name="text">The title text.</param>
             <param name="style">The title style.</param>
         </member>
-        <member name="M:Spectre.Console.TableTitle.SetStyle(Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TableTitle.SetStyle(System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the title style.
             </summary>
@@ -20572,7 +20580,7 @@
             Gets an instance of <see cref="T:Spectre.Console.Text"/> containing a new line.
             </summary>
         </member>
-        <member name="M:Spectre.Console.Text.#ctor(System.String,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.Text.#ctor(System.String,System.Nullable{Spectre.Console.Style})">
             <summary>
             Initializes a new instance of the <see cref="T:Spectre.Console.Text"/> class.
             </summary>
@@ -20762,7 +20770,7 @@
             Contains extension methods for <see cref="T:Spectre.Console.Tree"/>.
             </summary>
         </member>
-        <member name="M:Spectre.Console.TreeExtensions.Style(Spectre.Console.Tree,Spectre.Console.Style)">
+        <member name="M:Spectre.Console.TreeExtensions.Style(Spectre.Console.Tree,System.Nullable{Spectre.Console.Style})">
             <summary>
             Sets the tree style.
             </summary>
