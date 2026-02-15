@@ -52,6 +52,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\Spectre.Docs.Playground.Samples\Samples\*.cs"
+                      LogicalName="Sample.%(Filename)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
