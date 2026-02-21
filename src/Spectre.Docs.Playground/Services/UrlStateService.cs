@@ -23,7 +23,7 @@ public sealed class UrlStateService
     /// <summary>
     /// Creates an encoded URL payload with the given code and options.
     /// </summary>
-    public static string Encode(string code, bool runImmediately = false)
+    public static string Encode(string code, bool runImmediately = false, int terminalWidth = 0, int terminalHeight = 0)
     {
         if (string.IsNullOrEmpty(code))
         {
@@ -33,7 +33,9 @@ public sealed class UrlStateService
         var payload = new UrlPayload
         {
             Code = code,
-            RunImmediately = runImmediately
+            RunImmediately = runImmediately,
+            TerminalWidth = terminalWidth,
+            TerminalHeight = terminalHeight
         };
 
         return CompressBytes(payload.ToByteArray());
@@ -68,9 +70,9 @@ public sealed class UrlStateService
     /// <summary>
     /// Updates the URL hash with the compressed payload.
     /// </summary>
-    public async Task UpdateUrlAsync(string code, bool runImmediately = false)
+    public async Task UpdateUrlAsync(string code, bool runImmediately = false, int terminalWidth = 0, int terminalHeight = 0)
     {
-        var encoded = Encode(code, runImmediately);
+        var encoded = Encode(code, runImmediately, terminalWidth, terminalHeight);
         await _jsRuntime.InvokeVoidAsync("urlStateInterop.setHash", encoded);
     }
 

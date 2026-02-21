@@ -193,6 +193,78 @@
     background: var(--terminal-inner-bg);
   }
 
+  /* ===== Options Section ===== */
+  .options-section {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .options-toggle {
+    @apply flex items-center gap-1.5 w-full px-3 py-1.5 text-[12px] cursor-pointer border-none;
+    background: var(--bg-panel-header);
+    color: var(--text-secondary);
+  }
+
+  .options-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .options-chevron {
+    @apply w-3.5 h-3.5 shrink-0 transition-transform duration-150;
+  }
+
+  .options-chevron-open {
+    transform: rotate(90deg);
+  }
+
+  .options-body {
+    @apply flex flex-wrap items-center gap-x-5 gap-y-2 px-3 py-2 text-[12px];
+    background: var(--bg-panel-header);
+    color: var(--text-secondary);
+  }
+
+  .options-group {
+    @apply flex items-center gap-2;
+  }
+
+  .options-label {
+    @apply shrink-0;
+  }
+
+  .options-dimensions {
+    @apply flex items-center gap-1.5;
+  }
+
+  .options-input {
+    @apply w-[60px] px-1.5 py-0.5 rounded-[3px] text-[12px];
+    background: var(--btn-secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--btn-secondary-border);
+  }
+
+  .options-input:focus {
+    border-color: #0e639c;
+    outline: none;
+  }
+
+  .options-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+  }
+
+  .options-dim-sep {
+    @apply text-[11px];
+    color: var(--text-secondary);
+  }
+
+  .options-check-label {
+    @apply flex items-center gap-1.5 cursor-pointer;
+  }
+
+  .options-checkbox {
+    @apply w-3.5 h-3.5 cursor-pointer;
+    accent-color: #0e639c;
+  }
+
   /* ===== Panel Header ===== */
   .panel-header {
     @apply flex items-center justify-between px-4 py-2 text-[13px];

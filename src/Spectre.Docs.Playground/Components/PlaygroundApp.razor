@@ -67,6 +67,41 @@
                 </div>
             </div>
         </div>
+        <div class="options-section">
+            <button class="options-toggle" @onclick="ToggleOptions">
+                <svg class="options-chevron @(_optionsExpanded ? "options-chevron-open" : "")" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                </svg>
+                <span>Options</span>
+            </button>
+            @if (_optionsExpanded)
+            {
+                <div class="options-body">
+                    <div class="options-group">
+                        <label class="options-label">Terminal Size</label>
+                        <div class="options-dimensions">
+                            <input type="number" class="options-input" placeholder="cols"
+                                   min="1" max="500"
+                                   value="@(_terminalWidth == 0 ? "" : _terminalWidth)"
+                                   @onchange="OnTerminalWidthChanged" />
+                            <span class="options-dim-sep">&times;</span>
+                            <input type="number" class="options-input" placeholder="rows"
+                                   min="1" max="500"
+                                   value="@(_terminalHeight == 0 ? "" : _terminalHeight)"
+                                   @onchange="OnTerminalHeightChanged" />
+                        </div>
+                    </div>
+                    <div class="options-group">
+                        <label class="options-check-label">
+                            <input type="checkbox" class="options-checkbox"
+                                   checked="@_autoStart"
+                                   @onchange="OnAutoStartChanged" />
+                            Auto Start
+                        </label>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
@@ -80,6 +115,10 @@
     private string? _initialCode;
     private bool _initialCodeLoaded;
     private bool _runImmediately;
+    private bool _optionsExpanded;
+    private int _terminalWidth;
+    private int _terminalHeight;
+    private bool _autoStart;
 
     private static readonly Dictionary<string, string> Examples = SampleLoader.LoadExamples();
 
@@ -95,6 +134,9 @@
                 {
                     _initialCode = payload.Code;
                     _runImmediately = payload.RunImmediately;
+                    _terminalWidth = payload.TerminalWidth;
+                    _terminalHeight = payload.TerminalHeight;
+                    _autoStart = payload.RunImmediately;
                     // Skip welcome animation when loading shared code
                     _hasPlayedWelcome = true;
                 }
@@ -268,7 +310,7 @@
             var code = await _codeEditor.GetCode();
 
             // Update URL with compressed code for sharing
-            await UrlStateService.UpdateUrlAsync(code);
+            await UrlStateService.UpdateUrlAsync(code, _autoStart, _terminalWidth, _terminalHeight);
 
             // Compile the code
             var compilationResult = await CompilationService.CompileAsync(code);
@@ -282,8 +324,10 @@
                 return;
             }
 
-            // Get terminal size
-            var (cols, rows) = await _terminal.GetSize();
+            // Get terminal size (use overrides if set, otherwise use actual terminal size)
+            var (actualCols, actualRows) = await _terminal.GetSize();
+            var cols = _terminalWidth > 0 ? _terminalWidth : actualCols;
+            var rows = _terminalHeight > 0 ? _terminalHeight : actualRows;
 
             // Execute the compiled assembly using SharedTerminalIO
             // Cancellation is handled by SharedTerminalIO (Stop button or Ctrl+C)
@@ -317,6 +361,26 @@
     {
         _terminalIO?.Cancel();
         return Task.CompletedTask;
+    }
+
+    private void ToggleOptions()
+    {
+        _optionsExpanded = !_optionsExpanded;
+    }
+
+    private void OnTerminalWidthChanged(ChangeEventArgs e)
+    {
+        _terminalWidth = int.TryParse(e.Value?.ToString(), out var w) && w > 0 ? w : 0;
+    }
+
+    private void OnTerminalHeightChanged(ChangeEventArgs e)
+    {
+        _terminalHeight = int.TryParse(e.Value?.ToString(), out var h) && h > 0 ? h : 0;
+    }
+
+    private void OnAutoStartChanged(ChangeEventArgs e)
+    {
+        _autoStart = e.Value is true or "true" or "True";
     }
 
     public ValueTask DisposeAsync()

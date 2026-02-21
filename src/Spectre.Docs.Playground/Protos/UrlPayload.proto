@@ -5,4 +5,6 @@ option csharp_namespace = "Spectre.Docs.Playground.Services";
 message UrlPayload {
   string code = 1;
   bool run_immediately = 2;
+  int32 terminal_width = 3;
+  int32 terminal_height = 4;
 }
