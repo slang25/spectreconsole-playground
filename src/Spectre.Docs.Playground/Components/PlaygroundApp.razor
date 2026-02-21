@@ -157,6 +157,9 @@
                 _runImmediately = false;
                 await Task.Delay(100);
                 await RunCode();
+
+                // Pre-populate dimensions from actual terminal size if not set by URL
+                await PopulateTerminalDimensions();
             }
             else if (!_hasPlayedWelcome && _terminal != null)
             {
@@ -168,6 +171,9 @@
                     // Initialize terminal for the welcome animation
                     _terminalIO = await _terminal.InitializeAsync();
                     await PlayWelcomeAnimation();
+
+                    // Pre-populate dimensions from actual terminal size
+                    await PopulateTerminalDimensions();
                 }
                 catch (Exception ex)
                 {
@@ -363,19 +369,46 @@
         return Task.CompletedTask;
     }
 
+    private async Task PopulateTerminalDimensions()
+    {
+        if (_terminal == null) return;
+
+        // Only populate if no URL-specified dimensions
+        if (_terminalWidth == 0 && _terminalHeight == 0)
+        {
+            var (cols, rows) = await _terminal.GetSize();
+            _terminalWidth = cols;
+            _terminalHeight = rows;
+            StateHasChanged();
+        }
+        else
+        {
+            // Apply URL-specified dimensions to the terminal
+            await _terminal.Resize(_terminalWidth, _terminalHeight);
+        }
+    }
+
     private void ToggleOptions()
     {
         _optionsExpanded = !_optionsExpanded;
     }
 
-    private void OnTerminalWidthChanged(ChangeEventArgs e)
+    private async Task OnTerminalWidthChanged(ChangeEventArgs e)
     {
         _terminalWidth = int.TryParse(e.Value?.ToString(), out var w) && w > 0 ? w : 0;
+        if (_terminal != null)
+        {
+            await _terminal.Resize(_terminalWidth, _terminalHeight);
+        }
     }
 
-    private void OnTerminalHeightChanged(ChangeEventArgs e)
+    private async Task OnTerminalHeightChanged(ChangeEventArgs e)
     {
         _terminalHeight = int.TryParse(e.Value?.ToString(), out var h) && h > 0 ? h : 0;
+        if (_terminal != null)
+        {
+            await _terminal.Resize(_terminalWidth, _terminalHeight);
+        }
     }
 
     private void OnAutoStartChanged(ChangeEventArgs e)

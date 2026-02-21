@@ -90,6 +90,19 @@
     }
 
     /// <summary>
+    /// Resize the terminal to specific dimensions.
+    /// Pass 0 for either value to revert to auto-fit behavior.
+    /// </summary>
+    public Task Resize(int cols, int rows)
+    {
+        if (_isInitialized)
+        {
+            Services.SharedTerminalIO.ResizeTerminal(cols, rows);
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Focus the terminal.
     /// </summary>
     public Task Focus()

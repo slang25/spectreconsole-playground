@@ -231,6 +231,15 @@ public sealed partial class SharedTerminalIO : IDisposable
     }
 
     /// <summary>
+    /// Resize the terminal to specific dimensions.
+    /// Pass 0 for either value to revert to auto-fit behavior.
+    /// </summary>
+    public static void ResizeTerminal(int cols, int rows)
+    {
+        JSResizeTerminal(cols, rows);
+    }
+
+    /// <summary>
     /// Set whether execution is currently running.
     /// Controls cursor blink behavior (cursor only blinks when running AND focused).
     /// </summary>
@@ -257,6 +266,9 @@ public sealed partial class SharedTerminalIO : IDisposable
 
     [JSImport("getTerminalSize", "sharedTerminal")]
     private static partial JSObject JSGetTerminalSize();
+
+    [JSImport("resizeTerminal", "sharedTerminal")]
+    private static partial void JSResizeTerminal(int cols, int rows);
 
     [JSImport("writeCancelKey", "sharedTerminal")]
     private static partial void JSWriteCancelKey();

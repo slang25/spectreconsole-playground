@@ -649,6 +649,20 @@ export function getTerminalSize() {
 }
 
 /**
+ * Resize the terminal to specific dimensions.
+ * Pass 0 for either value to revert to auto-fit behavior.
+ */
+export function resizeTerminal(cols, rows) {
+    if (!terminal) return;
+
+    if (cols > 0 && rows > 0) {
+        terminal.resize(cols, rows);
+    } else if (fitAddon) {
+        fitAddon.fit();
+    }
+}
+
+/**
  * Dispose resources.
  */
 export function dispose() {
@@ -679,6 +693,7 @@ globalThis.sharedTerminal = {
     focusTerminal,
     writeTerminal,
     getTerminalSize,
+    resizeTerminal,
     writeCancelKey,
     setExecutionRunning,
     dispose
@@ -692,6 +707,7 @@ export default {
     focusTerminal,
     writeTerminal,
     getTerminalSize,
+    resizeTerminal,
     writeCancelKey,
     setExecutionRunning,
     dispose
