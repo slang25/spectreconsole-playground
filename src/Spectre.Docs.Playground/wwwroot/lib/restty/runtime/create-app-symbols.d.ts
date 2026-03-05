@@ -1,0 +1,11 @@
+import { type NerdConstraint } from "../fonts";
+import type { ResttyTouchSelectionMode } from "./types";
+export declare const DEFAULT_SYMBOL_CONSTRAINT: NerdConstraint;
+export declare const DEFAULT_APPLE_SYMBOLS_CONSTRAINT: NerdConstraint;
+export declare const DEFAULT_EMOJI_CONSTRAINT: NerdConstraint;
+export declare function normalizeTouchSelectionMode(value: ResttyTouchSelectionMode | undefined): ResttyTouchSelectionMode;
+export declare function clampFiniteNumber(value: number | undefined, fallback: number, min: number, max: number, round?: boolean): number;
+export declare function isRenderSymbolLike(cp: number): boolean;
+export declare function resolveSymbolConstraint(cp: number): NerdConstraint | null;
+export declare function isRendererSymbolFallbackRange(cp: number): boolean;
+export declare function rendererSymbolFallbackRanges(): ReadonlyArray<readonly [number, number]>;

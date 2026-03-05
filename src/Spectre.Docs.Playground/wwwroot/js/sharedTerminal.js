@@ -5,50 +5,10 @@
  * Memory is allocated by C# from the WASM heap and shared with JS via pointers.
  */
 
-import { Terminal, FitAddon, init } from '/lib/ghostty-web/ghostty-web.js';
-
-// Lazy initialization - don't block module loading with top-level await
-// as this can cause deadlocks with Blazor WASM runtime
-let initPromise = null;
-let initError = null;
-let initComplete = false;
-
-/**
- * Initialize ghostty WASM lazily (on first terminal start).
- * This avoids blocking module import which can deadlock with Blazor WASM.
- */
-async function ensureInitialized() {
-    if (initComplete) {
-        return !initError;
-    }
-
-    if (!initPromise) {
-        initPromise = (async () => {
-            try {
-                console.log('[sharedTerminal] Initializing ghostty WASM...');
-                const wasmInitPromise = init();
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Ghostty WASM initialization timed out after 30 seconds')), 30000)
-                );
-                await Promise.race([wasmInitPromise, timeoutPromise]);
-                console.log('[sharedTerminal] Ghostty WASM initialized successfully');
-                initComplete = true;
-                return true;
-            } catch (err) {
-                initError = err;
-                initComplete = true;
-                console.error('[sharedTerminal] Failed to initialize ghostty WASM:', err);
-                return false;
-            }
-        })();
-    }
-
-    return initPromise;
-}
+import { Restty, parseGhosttyTheme } from '/lib/restty/restty.js';
 
 // Constants matching C# SharedTerminalIO
 const HEADER_SIZE = 12;
-const WRITE_INDEX_OFFSET = 0;
 const READ_INDEX_OFFSET = 4;
 const SIGNAL_OFFSET = 8;
 
@@ -57,13 +17,12 @@ let outputPtr = 0;
 let outputSize = 0;
 let inputPtr = 0;
 let inputSize = 0;
-let terminal = null;
-let fitAddon = null;
+let restty = null;
 let pollHandle = null;
-let resizeObserver = null;
 let containerElement = null;
-let isTerminalFocused = false;
-let isExecutionRunning = false;
+let terminalCols = 80;
+let terminalRows = 24;
+
 /**
  * Request cancellation (called when Ctrl+C is pressed).
  * This calls the C# exported RequestCancellationAsync method.
@@ -82,22 +41,11 @@ async function requestCancellation() {
 }
 
 /**
- * Update cursor blink state based on focus AND execution state.
- * Cursor only blinks when terminal is focused AND execution is running.
- */
-function updateCursorBlink() {
-    if (!terminal?.renderer?.setCursorBlink) return;
-    const shouldBlink = isTerminalFocused && isExecutionRunning;
-    terminal.renderer.setCursorBlink(shouldBlink);
-}
-
-/**
  * Set whether execution is currently running.
  * Called from C# when execution starts/stops.
  */
-export function setExecutionRunning(running) {
-    isExecutionRunning = running;
-    updateCursorBlink();
+export function setExecutionRunning(_running) {
+    // No-op: restty handles cursor rendering internally
 }
 
 /**
@@ -321,146 +269,215 @@ export function registerBuffers(outPtr, outSize, inPtr, inSize) {
 }
 
 /**
+ * Theme definition in Ghostty config format (One Dark Pro-like colors).
+ */
+const TERMINAL_THEME = parseGhosttyTheme(`
+foreground = #abb2bf
+background = #1e1e1e
+cursor-color = #d4d4d4
+cursor-text = #1e1e1e
+palette = 0=#282c34
+palette = 1=#e06c75
+palette = 2=#98c379
+palette = 3=#e5c07b
+palette = 4=#61afef
+palette = 5=#c678dd
+palette = 6=#56b6c2
+palette = 7=#abb2bf
+palette = 8=#5c6370
+palette = 9=#e06c75
+palette = 10=#98c379
+palette = 11=#e5c07b
+palette = 12=#61afef
+palette = 13=#c678dd
+palette = 14=#56b6c2
+palette = 15=#ffffff
+`);
+
+/**
  * Start the terminal in the specified container.
- * This is now async to allow lazy initialization of ghostty WASM.
  */
 export async function startTerminal(containerId) {
-    // Lazy init ghostty WASM on first use
-    const initSuccess = await ensureInitialized();
-    if (!initSuccess) {
-        console.error('[sharedTerminal] Cannot start terminal - initialization failed:', initError);
-        return;
-    }
-
     containerElement = document.getElementById(containerId);
     if (!containerElement) {
         console.error('[sharedTerminal] Container not found:', containerId);
         return;
     }
 
-    // Create ghostty terminal
-    terminal = new Terminal({
-        cursorBlink: false,
-        cursorStyle: 'block',
-        cursorInactiveStyle: 'outline',
-        fontSize: 18,
-        fontFamily: '"JetBrainsMono NF", Monaco, Menlo, "Courier New", monospace',
-        theme: {
-            background: '#1e1e1e',
-            foreground: '#abb2bf',
-            cursor: '#d4d4d4',
-            cursorAccent: '#1e1e1e',
-            black: '#282c34',
-            red: '#e06c75',
-            green: '#98c379',
-            yellow: '#e5c07b',
-            blue: '#61afef',
-            magenta: '#c678dd',
-            cyan: '#56b6c2',
-            white: '#abb2bf',
-            brightBlack: '#5c6370',
-            brightRed: '#e06c75',
-            brightGreen: '#98c379',
-            brightYellow: '#e5c07b',
-            brightBlue: '#61afef',
-            brightMagenta: '#c678dd',
-            brightCyan: '#56b6c2',
-            brightWhite: '#ffffff'
+    // Create restty terminal instance
+    restty = new Restty({
+        root: containerElement,
+        appOptions: {
+            fontSize: 18,
+            fontPreset: 'none',
+            fontSources: [
+                {
+                    type: 'url',
+                    url: 'https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf',
+                    label: 'JetBrainsMono NF Regular',
+                },
+                {
+                    type: 'url',
+                    url: 'https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Bold/JetBrainsMonoNerdFont-Bold.ttf',
+                    label: 'JetBrainsMono NF Bold',
+                },
+                {
+                    type: 'url',
+                    url: 'https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Italic/JetBrainsMonoNerdFont-Italic.ttf',
+                    label: 'JetBrainsMono NF Italic',
+                },
+                {
+                    type: 'url',
+                    url: 'https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.4.0/patched-fonts/JetBrainsMono/Ligatures/BoldItalic/JetBrainsMonoNerdFont-BoldItalic.ttf',
+                    label: 'JetBrainsMono NF BoldItalic',
+                },
+                {
+                    type: 'local',
+                    matchers: ['jetbrains mono nerd font', 'jetbrainsmono nf'],
+                    label: 'Local JetBrainsMono NF',
+                },
+            ],
+            maxScrollbackBytes: 1000 * 200, // ~1000 lines
+            callbacks: {
+                onTermSize: (cols, rows) => {
+                    terminalCols = cols;
+                    terminalRows = rows;
+                },
+            },
+            beforeInput: ({ text, source }) => {
+                if (source !== 'pty') {
+                    handleUserInput(text);
+                    return null; // Suppress restty's normal input processing
+                }
+                return text;
+            },
         },
-        scrollback: 1000
     });
 
-    fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.open(containerElement);
+    // Apply theme
+    restty.applyTheme(TERMINAL_THEME, 'inline');
 
-    // Wait for JetBrainsMono NF font to load before measuring
-    await document.fonts.load('14px "JetBrainsMono NF"');
-    terminal.loadFonts();
-
-    // Fit after a brief delay
-    setTimeout(() => fitAddon.fit(), 100);
-
-    // Handle resize
-    const handleResize = () => {
-        try {
-            fitAddon.fit();
-        } catch (e) {
-            console.warn('[sharedTerminal] Resize fit error:', e);
-        }
-    };
-
-    resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(containerElement);
-    window.addEventListener('resize', handleResize);
-
-    // Handle keyboard input - write directly to SharedArrayBuffer
-    terminal.onData(data => {
-        // Handle Ctrl+C specially - request cancellation
-        if (data === '\x03') {
-            requestCancellation();
-            return;
-        }
-
-        // Skip keys that are handled by onKey to avoid duplicates
-        // This includes escape sequences, control characters, and space
-        if (data.startsWith('\x1b') ||
-            data === '\r' || data === '\n' ||
-            data === '\b' || data === '\x7f' ||
-            data === '\t' || data === ' ') {
-            return;
-        }
-
-        // Write regular characters
-        for (const char of data) {
-            const keyInfo = parseCharToKeyInfo(char);
-            writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, false, false);
-        }
-    });
-
-    // Handle special keys
-    terminal.onKey(e => {
-        const domEvent = e.domEvent || {};
-        const code = domEvent.code || '';
-
-        const keyInfo = parseKeyEvent(code, e.key, domEvent);
-        if (keyInfo) {
-            writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, keyInfo.alt, keyInfo.ctrl);
-        }
-    });
-
-    // Handle focus/blur events for terminal styling
+    // Handle focus/blur events
+    const activePane = restty.getActivePane();
+    const imeInput = activePane?.imeInput;
     const frame = containerElement.closest('.terminal-frame');
+
     const updateFocusState = (focused) => {
-        isTerminalFocused = focused;
         const target = frame || containerElement;
         if (focused) {
             target.classList.add('terminal-focused');
         } else {
             target.classList.remove('terminal-focused');
         }
-        // Cursor blinks only when terminal is focused AND execution is running
-        updateCursorBlink();
     };
 
-    // Listen for focus events on the terminal's textarea
-    if (terminal.textarea) {
-        terminal.textarea.addEventListener('focus', () => updateFocusState(true));
-        terminal.textarea.addEventListener('blur', () => updateFocusState(false));
+    if (imeInput) {
+        imeInput.addEventListener('focus', () => updateFocusState(true));
+        imeInput.addEventListener('blur', () => updateFocusState(false));
     }
-
-    // The container is contenteditable which steals focus from the textarea.
-    // When container gets focus, redirect it to the textarea.
-    containerElement.addEventListener('focusin', (e) => {
-        if (e.target === containerElement && terminal.textarea) {
-            terminal.textarea.focus();
-        }
-    });
 
     // Start polling for output from C#
     startOutputPoll();
 
     console.log('[sharedTerminal] Terminal started');
+}
+
+/**
+ * Handle user keyboard input from restty's beforeInput hook.
+ * Converts text/escape sequences to ConsoleKeyInfo and writes to input ring buffer.
+ */
+function handleUserInput(data) {
+    // Handle Ctrl+C
+    if (data === '\x03') {
+        requestCancellation();
+        return;
+    }
+
+    // Handle escape sequences (CSI and SS3)
+    if (data.startsWith('\x1b')) {
+        const keyInfo = parseEscapeSequence(data);
+        if (keyInfo) {
+            writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, keyInfo.alt, keyInfo.ctrl);
+        }
+        return;
+    }
+
+    // Handle special single-char keys
+    switch (data) {
+        case '\r':
+        case '\n':
+            writeKeyInfo(ConsoleKey.Enter, 13, false, false, false);
+            return;
+        case '\b':
+        case '\x7f':
+            writeKeyInfo(ConsoleKey.Backspace, 8, false, false, false);
+            return;
+        case '\t':
+            writeKeyInfo(ConsoleKey.Tab, 9, false, false, false);
+            return;
+        case ' ':
+            writeKeyInfo(ConsoleKey.Spacebar, 32, false, false, false);
+            return;
+    }
+
+    // Handle regular characters (could be multiple for paste)
+    for (const char of data) {
+        const keyInfo = parseCharToKeyInfo(char);
+        writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, false, false);
+    }
+}
+
+/**
+ * Parse an escape sequence to ConsoleKey info.
+ * Handles CSI sequences (\x1b[...) and SS3 sequences (\x1bO...).
+ */
+function parseEscapeSequence(data) {
+    // CSI sequences: \x1b[ optionally with params and modifier
+    const csiMatch = data.match(/^\x1b\[(?:(\d+)(?:;(\d+))?)?([A-Z~])/);
+    if (csiMatch) {
+        const param1 = parseInt(csiMatch[1] || '1');
+        const modifier = parseInt(csiMatch[2] || '1');
+        const final = csiMatch[3];
+
+        // Modifier encoding: value = 1 + (shift ? 1 : 0) + (alt ? 2 : 0) + (ctrl ? 4 : 0)
+        const modBits = modifier - 1;
+        const shift = !!(modBits & 1);
+        const alt = !!(modBits & 2);
+        const ctrl = !!(modBits & 4);
+
+        switch (final) {
+            case 'A': return { key: ConsoleKey.UpArrow, char: 0, shift, alt, ctrl };
+            case 'B': return { key: ConsoleKey.DownArrow, char: 0, shift, alt, ctrl };
+            case 'C': return { key: ConsoleKey.RightArrow, char: 0, shift, alt, ctrl };
+            case 'D': return { key: ConsoleKey.LeftArrow, char: 0, shift, alt, ctrl };
+            case 'H': return { key: ConsoleKey.Home, char: 0, shift, alt, ctrl };
+            case 'F': return { key: ConsoleKey.End, char: 0, shift, alt, ctrl };
+            case '~':
+                switch (param1) {
+                    case 1: return { key: ConsoleKey.Home, char: 0, shift, alt, ctrl };
+                    case 2: return { key: ConsoleKey.Insert, char: 0, shift, alt, ctrl };
+                    case 3: return { key: ConsoleKey.Delete, char: 0, shift, alt, ctrl };
+                    case 4: return { key: ConsoleKey.End, char: 0, shift, alt, ctrl };
+                    case 5: return { key: ConsoleKey.PageUp, char: 0, shift, alt, ctrl };
+                    case 6: return { key: ConsoleKey.PageDown, char: 0, shift, alt, ctrl };
+                }
+        }
+    }
+
+    // SS3 sequences: \x1bO...
+    const ss3Match = data.match(/^\x1bO([A-Z])/);
+    if (ss3Match) {
+        switch (ss3Match[1]) {
+            case 'A': return { key: ConsoleKey.UpArrow, char: 0, shift: false, alt: false, ctrl: false };
+            case 'B': return { key: ConsoleKey.DownArrow, char: 0, shift: false, alt: false, ctrl: false };
+            case 'C': return { key: ConsoleKey.RightArrow, char: 0, shift: false, alt: false, ctrl: false };
+            case 'D': return { key: ConsoleKey.LeftArrow, char: 0, shift: false, alt: false, ctrl: false };
+            case 'H': return { key: ConsoleKey.Home, char: 0, shift: false, alt: false, ctrl: false };
+            case 'F': return { key: ConsoleKey.End, char: 0, shift: false, alt: false, ctrl: false };
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -487,64 +504,6 @@ function parseCharToKeyInfo(char) {
 }
 
 /**
- * Parse a key event to ConsoleKey info
- */
-function parseKeyEvent(code, key, domEvent) {
-    const shift = domEvent.shiftKey || false;
-    const alt = domEvent.altKey || false;
-    const ctrl = domEvent.ctrlKey || false;
-
-    // By DOM code
-    switch (code) {
-        case 'ArrowUp': return { key: ConsoleKey.UpArrow, char: 0, shift, alt, ctrl };
-        case 'ArrowDown': return { key: ConsoleKey.DownArrow, char: 0, shift, alt, ctrl };
-        case 'ArrowLeft': return { key: ConsoleKey.LeftArrow, char: 0, shift, alt, ctrl };
-        case 'ArrowRight': return { key: ConsoleKey.RightArrow, char: 0, shift, alt, ctrl };
-        case 'Home': return { key: ConsoleKey.Home, char: 0, shift, alt, ctrl };
-        case 'End': return { key: ConsoleKey.End, char: 0, shift, alt, ctrl };
-        case 'PageUp': return { key: ConsoleKey.PageUp, char: 0, shift, alt, ctrl };
-        case 'PageDown': return { key: ConsoleKey.PageDown, char: 0, shift, alt, ctrl };
-        case 'Delete': return { key: ConsoleKey.Delete, char: 0, shift, alt, ctrl };
-        case 'Insert': return { key: ConsoleKey.Insert, char: 0, shift, alt, ctrl };
-        case 'Backspace': return { key: ConsoleKey.Backspace, char: 8, shift, alt, ctrl };
-        case 'Enter':
-        case 'NumpadEnter': return { key: ConsoleKey.Enter, char: 13, shift, alt, ctrl };
-        case 'Tab': return { key: ConsoleKey.Tab, char: 9, shift, alt, ctrl };
-        case 'Escape': return { key: ConsoleKey.Escape, char: 27, shift, alt, ctrl };
-        case 'Space': return { key: ConsoleKey.Spacebar, char: 32, shift, alt, ctrl };
-    }
-
-    // By escape sequence
-    switch (key) {
-        case '\x1b[A':
-        case '\x1bOA': return { key: ConsoleKey.UpArrow, char: 0, shift, alt, ctrl };
-        case '\x1b[B':
-        case '\x1bOB': return { key: ConsoleKey.DownArrow, char: 0, shift, alt, ctrl };
-        case '\x1b[C':
-        case '\x1bOC': return { key: ConsoleKey.RightArrow, char: 0, shift, alt, ctrl };
-        case '\x1b[D':
-        case '\x1bOD': return { key: ConsoleKey.LeftArrow, char: 0, shift, alt, ctrl };
-        case '\x1b[H':
-        case '\x1bOH':
-        case '\x1b[1~': return { key: ConsoleKey.Home, char: 0, shift, alt, ctrl };
-        case '\x1b[F':
-        case '\x1bOF':
-        case '\x1b[4~': return { key: ConsoleKey.End, char: 0, shift, alt, ctrl };
-        case '\x1b[5~': return { key: ConsoleKey.PageUp, char: 0, shift, alt, ctrl };
-        case '\x1b[6~': return { key: ConsoleKey.PageDown, char: 0, shift, alt, ctrl };
-        case '\x1b[3~': return { key: ConsoleKey.Delete, char: 0, shift, alt, ctrl };
-        case '\x1b[2~': return { key: ConsoleKey.Insert, char: 0, shift, alt, ctrl };
-        case '\x7f':
-        case '\b': return { key: ConsoleKey.Backspace, char: 8, shift, alt, ctrl };
-        case '\r':
-        case '\n': return { key: ConsoleKey.Enter, char: 13, shift, alt, ctrl };
-        case '\t': return { key: ConsoleKey.Tab, char: 9, shift, alt, ctrl };
-    }
-
-    return null;
-}
-
-/**
  * Write a ConsoleKeyInfo to the input buffer.
  * Format: [keyCode: u8, keyChar: u16 (LE), modifiers: u8]
  */
@@ -567,12 +526,12 @@ function writeKeyInfo(keyCode, keyChar, shift, alt, ctrl) {
  */
 function startOutputPoll() {
     const poll = () => {
-        if (outputRing && terminal) {
+        if (outputRing && restty) {
             const data = outputRing.readString();
             if (data.length > 0) {
                 // Normalize line endings
                 const normalized = data.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-                terminal.write(normalized);
+                restty.sendInput(normalized, 'pty');
             }
         }
         pollHandle = requestAnimationFrame(poll);
@@ -595,9 +554,10 @@ export function stopTerminal() {
  * Clear the terminal.
  */
 export function clearTerminal() {
-    if (terminal) {
-        terminal.clear();
-        terminal.reset();
+    if (restty) {
+        restty.clearScreen();
+        // Send VT reset sequence
+        restty.sendInput('\x1bc', 'pty');
     }
     if (outputRing) {
         outputRing.reset();
@@ -611,8 +571,8 @@ export function clearTerminal() {
  * Focus the terminal.
  */
 export function focusTerminal() {
-    if (terminal) {
-        terminal.focus();
+    if (restty) {
+        restty.focus();
     }
 }
 
@@ -631,10 +591,10 @@ export function writeCancelKey() {
  * Write directly to the terminal (for welcome animation before SharedTerminalIO is ready).
  */
 export function writeTerminal(text) {
-    if (terminal) {
-        // Normalize line endings for xterm
+    if (restty) {
+        // Normalize line endings
         const normalized = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-        terminal.write(normalized);
+        restty.sendInput(normalized, 'pty');
     }
 }
 
@@ -642,10 +602,7 @@ export function writeTerminal(text) {
  * Get the terminal size.
  */
 export function getTerminalSize() {
-    if (terminal) {
-        return { cols: terminal.cols, rows: terminal.rows };
-    }
-    return { cols: 80, rows: 24 };
+    return { cols: terminalCols, rows: terminalRows };
 }
 
 /**
@@ -654,18 +611,11 @@ export function getTerminalSize() {
 export function dispose() {
     stopTerminal();
 
-    if (resizeObserver) {
-        resizeObserver.disconnect();
-        resizeObserver = null;
+    if (restty) {
+        restty.destroy();
+        restty = null;
     }
 
-    if (terminal) {
-        terminal.dispose();
-        terminal = null;
-    }
-
-    outputBuffer = null;
-    inputBuffer = null;
     outputRing = null;
     inputRing = null;
 }

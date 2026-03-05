@@ -1,0 +1,24 @@
+import { type Color } from "../renderer";
+export declare const OVERLAY_SCROLLBAR_WIDTH_CSS_PX = 7;
+export declare const OVERLAY_SCROLLBAR_MARGIN_CSS_PX = 4;
+export declare const OVERLAY_SCROLLBAR_INSET_Y_CSS_PX = 2;
+export declare const OVERLAY_SCROLLBAR_MIN_THUMB_CSS_PX = 28;
+export declare const OVERLAY_SCROLLBAR_CAP_SUPERSAMPLE = 8;
+export type OverlayScrollbarLayout = {
+    total: number;
+    offset: number;
+    len: number;
+    denom: number;
+    width: number;
+    trackX: number;
+    trackY: number;
+    trackH: number;
+    thumbY: number;
+    thumbH: number;
+};
+export declare function computeOverlayScrollbarLayout(total: number, offset: number, len: number, canvasWidth: number, canvasHeight: number, currentDpr: number): OverlayScrollbarLayout | null;
+export declare function isPointInScrollbarHitArea(layout: OverlayScrollbarLayout, x: number, y: number): boolean;
+export declare function isPointInScrollbarThumb(layout: OverlayScrollbarLayout, x: number, y: number): boolean;
+export declare function scrollbarOffsetForPointerY(layout: OverlayScrollbarLayout, pointerY: number, thumbGrabRatio: number): number;
+export declare function pushRoundedVerticalBar(out: number[], x: number, y: number, w: number, h: number, color: Color, capSupersample?: number): void;
+export declare function resolveOverlayScrollbarAlpha(now: number, lastInputAt: number): number;
