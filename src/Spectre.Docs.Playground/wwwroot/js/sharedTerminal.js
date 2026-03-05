@@ -304,11 +304,6 @@ export async function startTerminal(containerId) {
         return;
     }
 
-    // Set restty CSS custom properties to match terminal background and styling
-    containerElement.style.setProperty('--restty-pane-background', '#1e1e1e');
-    containerElement.style.setProperty('--restty-pane-split-background', '#1e1e1e');
-    containerElement.style.setProperty('--restty-pane-inactive-opacity', '1');
-
     // Wait for terminal to report its first size (WASM + fonts loaded)
     let resolveReady;
     const readyPromise = new Promise(resolve => { resolveReady = resolve; });
@@ -319,6 +314,12 @@ export async function startTerminal(containerId) {
         root: containerElement,
         defaultContextMenu: false,
         shortcuts: false,
+        paneStyles: {
+            paneBackground: '#1e1e1e',
+            splitBackground: '#1e1e1e',
+            inactivePaneOpacity: 1,
+            activePaneOpacity: 1,
+        },
         appOptions: {
             fontSize: 18,
             fontPreset: 'none',
