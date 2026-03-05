@@ -304,9 +304,21 @@ export async function startTerminal(containerId) {
         return;
     }
 
+    // Set restty CSS custom properties to match terminal background and styling
+    containerElement.style.setProperty('--restty-pane-background', '#1e1e1e');
+    containerElement.style.setProperty('--restty-pane-split-background', '#1e1e1e');
+    containerElement.style.setProperty('--restty-pane-inactive-opacity', '1');
+
+    // Wait for terminal to report its first size (WASM + fonts loaded)
+    let resolveReady;
+    const readyPromise = new Promise(resolve => { resolveReady = resolve; });
+    let readyResolved = false;
+
     // Create restty terminal instance
     restty = new Restty({
         root: containerElement,
+        defaultContextMenu: false,
+        shortcuts: false,
         appOptions: {
             fontSize: 18,
             fontPreset: 'none',
@@ -342,6 +354,10 @@ export async function startTerminal(containerId) {
                 onTermSize: (cols, rows) => {
                     terminalCols = cols;
                     terminalRows = rows;
+                    if (!readyResolved) {
+                        readyResolved = true;
+                        resolveReady();
+                    }
                 },
             },
             beforeInput: ({ text, source }) => {
@@ -356,6 +372,16 @@ export async function startTerminal(containerId) {
 
     // Apply theme
     restty.applyTheme(TERMINAL_THEME, 'inline');
+
+    // Wait for terminal to be ready (WASM loaded, fonts parsed, size calculated)
+    // with a timeout fallback so we don't block forever
+    await Promise.race([
+        readyPromise,
+        new Promise(resolve => setTimeout(resolve, 5000)),
+    ]);
+
+    // Force a size recalculation after everything is ready
+    restty.updateSize(true);
 
     // Handle focus/blur events
     const activePane = restty.getActivePane();
