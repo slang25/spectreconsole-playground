@@ -321,7 +321,7 @@ export async function startTerminal(containerId) {
             activePaneOpacity: 1,
         },
         appOptions: {
-            fontSize: 18,
+            fontSize: 24,
             fontPreset: 'none',
             fontSources: [
                 {
