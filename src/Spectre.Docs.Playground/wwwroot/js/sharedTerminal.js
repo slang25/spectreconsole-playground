@@ -381,9 +381,10 @@ export async function startTerminal(containerId) {
         new Promise(resolve => setTimeout(resolve, 5000)),
     ]);
 
-    // Re-apply theme now that the WebGPU renderer is initialized,
-    // ensuring the background color (#1e1e1e) takes effect on the canvas
-    restty.applyTheme(TERMINAL_THEME, 'inline');
+    // Set background color via OSC 11 now that the WebGPU renderer is initialized.
+    // applyTheme cannot be called again here without disrupting the renderer,
+    // but the OSC escape sequence correctly updates the canvas background.
+    restty.sendInput('\x1b]11;rgb:1e/1e/1e\x07', 'pty');
 
     // Force a size recalculation after everything is ready
     restty.updateSize(true);
