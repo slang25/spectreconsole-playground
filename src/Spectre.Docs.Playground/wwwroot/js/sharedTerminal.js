@@ -371,6 +371,9 @@ export async function startTerminal(containerId) {
         },
     });
 
+    // Apply theme early so palette colors are queued for the renderer
+    restty.applyTheme(TERMINAL_THEME, 'inline');
+
     // Wait for terminal to be ready (WASM loaded, fonts parsed, size calculated)
     // with a timeout fallback so we don't block forever
     await Promise.race([
@@ -378,7 +381,8 @@ export async function startTerminal(containerId) {
         new Promise(resolve => setTimeout(resolve, 5000)),
     ]);
 
-    // Apply theme after WASM renderer is initialized so background color takes effect
+    // Re-apply theme now that the WebGPU renderer is initialized,
+    // ensuring the background color (#1e1e1e) takes effect on the canvas
     restty.applyTheme(TERMINAL_THEME, 'inline');
 
     // Force a size recalculation after everything is ready
