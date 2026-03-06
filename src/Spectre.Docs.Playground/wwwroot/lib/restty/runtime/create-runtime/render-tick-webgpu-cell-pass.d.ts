@@ -1,0 +1,25 @@
+import type { GlyphConstraintMeta } from "../atlas-builder";
+import type { CollectWebGPUCellPassParams, GlyphQueueItem } from "./render-tick-webgpu.types";
+export declare function collectWebGPUCellPass(params: CollectWebGPUCellPassParams): {
+    bgData: number[];
+    selectionData: number[];
+    underlineData: number[];
+    cursorData: number[];
+    fgRectData: number[];
+    overlayData: number[];
+    glyphDataNearestByFont: Map<number, number[]>;
+    glyphDataLinearByFont: Map<number, number[]>;
+    glyphQueueByFont: Map<number, GlyphQueueItem[]>;
+    overlayGlyphDataNearestByFont: Map<number, number[]>;
+    overlayGlyphDataLinearByFont: Map<number, number[]>;
+    overlayGlyphQueueByFont: Map<number, GlyphQueueItem[]>;
+    neededGlyphIdsByFont: Map<number, Set<number>>;
+    neededGlyphMetaByFont: Map<number, Map<number, GlyphConstraintMeta>>;
+    scaleByFont: number[];
+    bitmapScaleByFont: number[];
+    baselineAdjustByFont: number[];
+    nerdMetrics: import("./render-tick-webgpu.types").NerdMetrics;
+    getGlyphQueue: (fontIndex: number) => GlyphQueueItem[];
+    getOverlayGlyphQueue: (fontIndex: number) => GlyphQueueItem[];
+    getGlyphSet: (fontIndex: number) => Set<number>;
+};

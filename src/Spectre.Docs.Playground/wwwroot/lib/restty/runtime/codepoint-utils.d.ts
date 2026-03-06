@@ -1,0 +1,12 @@
+import type { FontEntry } from "../fonts";
+export declare function isLikelyEmojiCodepoint(cp: number): boolean;
+export declare function isVariationSelectorCodepoint(cp: number): boolean;
+export declare function isCombiningMarkCodepoint(cp: number): boolean;
+export declare function isEmojiModifierCodepoint(cp: number): boolean;
+export declare function isCoverageIgnorableCodepoint(cp: number): boolean;
+export declare function shouldMergeTrailingClusterCodepoint(cp: number): boolean;
+export declare function resolvePresentationPreference(text: string, chars: string[]): "emoji" | "text" | "auto";
+export declare function stylePreferenceFromFlags(bold: boolean, italic: boolean): "regular" | "bold" | "italic" | "bold_italic";
+export declare function isAppleSymbolsFont(entry: FontEntry | undefined | null): boolean;
+export declare function fontEntryHasBoldStyle(entry: FontEntry | undefined | null): boolean;
+export declare function fontEntryHasItalicStyle(entry: FontEntry | undefined | null): boolean;

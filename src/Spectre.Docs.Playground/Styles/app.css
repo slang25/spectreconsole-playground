@@ -506,7 +506,7 @@
     @apply flex-1 overflow-hidden;
   }
 
-  /* Hide the native text caret in Firefox for ghostty-web */
+  /* Hide the native text caret in Firefox for restty */
   .terminal-container,
   .terminal-container * {
     caret-color: transparent !important;

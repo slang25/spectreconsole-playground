@@ -1,0 +1,105 @@
+import type { Bitmap as TextShaperBitmap, Font as TextShaperFont, FontSizeMode as TextShaperFontSizeMode, GlyphAtlas as TextShaperGlyphAtlas, GlyphMetrics as TextShaperGlyphMetrics } from "text-shaper";
+/** text-shaper Font used by runtime/font manager. */
+export type Font = TextShaperFont;
+/** text-shaper Bitmap used by atlas builders. */
+export type FontAtlasBitmap = TextShaperBitmap;
+/** text-shaper glyph metrics used inside atlases. */
+export type FontAtlasGlyphMetrics = TextShaperGlyphMetrics;
+/** text-shaper font size mode ("em" | "height"). */
+export type FontSizeMode = TextShaperFontSizeMode;
+/** Restty atlas extends text-shaper atlas with extra caches used internally. */
+export type FontAtlas = TextShaperGlyphAtlas & {
+    glyphsByWidth?: Map<number, Map<number, FontAtlasGlyphMetrics>>;
+    inset?: number;
+    colorGlyphs?: Set<number>;
+};
+/**
+ * A loaded font with its associated caches and rendering metadata.
+ */
+export type FontEntry = {
+    /** text-shaper Font instance. */
+    font: Font;
+    /** Human-readable font name. */
+    label: string;
+    /** Cache of shaped glyph clusters keyed by input string. */
+    glyphCache: Map<string, ShapedCluster>;
+    /** Cache of glyph advance bounds keyed by glyph ID. */
+    boundsCache: Map<number, number>;
+    /** Map of glyph IDs to their original text for color emoji fallback. */
+    colorGlyphTexts: Map<number, string>;
+    /** Set of all glyph IDs available in this font. */
+    glyphIds: Set<number>;
+    /** GPU texture atlas for this font, or null if not yet built. */
+    atlas: FontAtlas | null;
+    /** Font size in CSS pixels. */
+    fontSizePx: number;
+    /** Scale factor applied when rasterizing to the atlas. */
+    atlasScale: number;
+    /** Horizontal advance width in font design units. */
+    advanceUnits: number;
+    /** Signature string used to detect constraint changes for atlas invalidation. */
+    constraintSignature?: string;
+    /** Last atlas build hinting mode for invalidation checks. */
+    atlasHinting?: boolean;
+    /** Last atlas build hint target for invalidation checks. */
+    atlasHintTarget?: "auto" | "light" | "normal";
+};
+/**
+ * Result of shaping a text cluster into positioned glyphs.
+ */
+export type ShapedCluster = {
+    /** Ordered list of glyphs produced by the shaper. */
+    glyphs: ShapedGlyph[];
+    /** Total horizontal advance of the cluster in font units. */
+    advance: number;
+};
+/**
+ * A single positioned glyph within a shaped cluster.
+ */
+export type ShapedGlyph = {
+    /** Font-internal glyph identifier. */
+    glyphId: number;
+    /** Horizontal advance after this glyph in font units. */
+    xAdvance: number;
+    /** Vertical advance after this glyph in font units. */
+    yAdvance: number;
+    /** Horizontal offset from the current pen position. */
+    xOffset: number;
+    /** Vertical offset from the current pen position. */
+    yOffset: number;
+};
+/**
+ * Internal state of the font manager.
+ */
+export type FontManagerState = {
+    /** Primary text-shaper Font instance, or null before initialization. */
+    font: Font | null;
+    /** Loaded font entries in priority order (primary + fallbacks). */
+    fonts: FontEntry[];
+    /** Current font size in CSS pixels. */
+    fontSizePx: number;
+    /** How font size maps to design units ("em" | "height"). */
+    sizeMode: FontSizeMode;
+    /** Cache mapping text strings to the index of the font chosen to render them. */
+    fontPickCache: Map<string, number>;
+};
+/**
+ * Descriptor for a fallback font to load on demand.
+ */
+export type FallbackFontSource = {
+    /** Display name of the fallback font. */
+    name: string;
+    /** URL to fetch the font file from. */
+    url: string;
+    /** Unicode range or script patterns this font covers. */
+    matchers: string[];
+};
+/**
+ * Per-font scale override applied when a font's label matches the pattern.
+ */
+export type FontScaleOverride = {
+    /** Regex tested against the font label. */
+    match: RegExp;
+    /** Multiplier applied to the font's atlas scale. */
+    scale: number;
+};
