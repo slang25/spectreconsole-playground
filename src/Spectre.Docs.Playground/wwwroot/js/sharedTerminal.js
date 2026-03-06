@@ -386,6 +386,9 @@ export async function startTerminal(containerId) {
     // but the OSC escape sequence correctly updates the canvas background.
     restty.sendInput('\x1b]11;rgb:1e/1e/1e\x07', 'pty');
 
+    // Enable blinking block cursor (DECSCUSR: CSI 1 SP q)
+    restty.sendInput('\x1b[1 q', 'pty');
+
     // Force a size recalculation after everything is ready
     restty.updateSize(true);
 
