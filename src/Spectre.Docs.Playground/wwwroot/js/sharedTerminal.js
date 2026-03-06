@@ -371,15 +371,15 @@ export async function startTerminal(containerId) {
         },
     });
 
-    // Apply theme
-    restty.applyTheme(TERMINAL_THEME, 'inline');
-
     // Wait for terminal to be ready (WASM loaded, fonts parsed, size calculated)
     // with a timeout fallback so we don't block forever
     await Promise.race([
         readyPromise,
         new Promise(resolve => setTimeout(resolve, 5000)),
     ]);
+
+    // Apply theme after WASM renderer is initialized so background color takes effect
+    restty.applyTheme(TERMINAL_THEME, 'inline');
 
     // Force a size recalculation after everything is ready
     restty.updateSize(true);
