@@ -94,7 +94,12 @@ export async function ensureStarted() {
     if (!readyPromise) {
         spawnWorker();
     }
-    return readyPromise;
+    try {
+        return await readyPromise;
+    } catch (err) {
+        readyPromise = null; // let the next call respawn after a boot failure
+        throw err;
+    }
 }
 
 /**
