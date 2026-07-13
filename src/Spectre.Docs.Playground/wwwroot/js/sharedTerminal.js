@@ -1,11 +1,14 @@
 /**
- * WASM heap memory-based terminal I/O for Spectre.Console Playground.
- * Completely bypasses Blazor JS interop for terminal communication.
+ * Terminal UI for the Spectre.Console Playground.
  *
- * Memory is allocated by C# from the WASM heap and shared with JS via pointers.
+ * Renders program output with ghostty-web and feeds keyboard input to the
+ * executor worker. All run-time I/O flows through SharedArrayBuffer ring
+ * buffers owned by js/executor.js — no .NET interop is involved while user
+ * code is executing, and the page's Blazor runtime stays single-threaded.
  */
 
 import { Terminal, FitAddon, init } from '/lib/ghostty-web/ghostty-web.js';
+import * as executor from './executor.js';
 
 // Lazy initialization - don't block module loading with top-level await
 // as this can cause deadlocks with Blazor WASM runtime
@@ -46,17 +49,7 @@ async function ensureInitialized() {
     return initPromise;
 }
 
-// Constants matching C# SharedTerminalIO
-const HEADER_SIZE = 12;
-const WRITE_INDEX_OFFSET = 0;
-const READ_INDEX_OFFSET = 4;
-const SIGNAL_OFFSET = 8;
-
 // Global state
-let outputPtr = 0;
-let outputSize = 0;
-let inputPtr = 0;
-let inputSize = 0;
 let terminal = null;
 let fitAddon = null;
 let pollHandle = null;
@@ -64,22 +57,10 @@ let resizeObserver = null;
 let containerElement = null;
 let isTerminalFocused = false;
 let isExecutionRunning = false;
-/**
- * Request cancellation (called when Ctrl+C is pressed).
- * This calls the C# exported RequestCancellationAsync method.
- */
-async function requestCancellation() {
-    try {
-        const runtime = globalThis.getDotnetRuntime(0);
-        const { getAssemblyExports } = runtime;
-        const exports = await getAssemblyExports("Spectre.Docs.Playground");
-        if (exports?.Spectre?.Docs?.Playground?.Services?.SharedTerminalIO) {
-            await exports.Spectre.Docs.Playground.Services.SharedTerminalIO.RequestCancellationAsync();
-        }
-    } catch {
-        // Ignore errors - user can use Stop button as fallback
-    }
-}
+
+// Streaming decoder so multi-byte UTF-8 sequences split across ring reads
+// decode correctly.
+const outputDecoder = new TextDecoder();
 
 /**
  * Update cursor blink state based on focus AND execution state.
@@ -101,181 +82,26 @@ export function setExecutionRunning(running) {
 }
 
 /**
- * Get the WASM heap memory view.
- * This accesses the .NET WASM linear memory.
+ * Run a compiled user assembly on the executor worker.
+ * Called from C# (ExecutionService).
  */
-function getHeap() {
-    // In .NET WASM, the heap is exposed via Module.HEAPU8
-    // The dotnet runtime exposes it differently
-    if (typeof Module !== 'undefined' && Module.HEAPU8) {
-        return Module.HEAPU8;
-    }
-    // For .NET 7+ with dotnet.js
-    if (typeof getDotnetRuntime === 'function') {
-        const runtime = getDotnetRuntime(0);
-        if (runtime && runtime.Module && runtime.Module.HEAPU8) {
-            return runtime.Module.HEAPU8;
-        }
-    }
-    // Try globalThis
-    if (globalThis.Module && globalThis.Module.HEAPU8) {
-        return globalThis.Module.HEAPU8;
-    }
-    // Try dotnet object (newer .NET versions)
-    if (typeof dotnet !== 'undefined') {
-        // .NET 8+ exposes memory differently
-        if (dotnet.instance && dotnet.instance.exports && dotnet.instance.exports.memory) {
-            return new Uint8Array(dotnet.instance.exports.memory.buffer);
-        }
-    }
-    // Try window.DOTNET
-    if (window.DOTNET && window.DOTNET.runtime) {
-        const mem = window.DOTNET.runtime.Module?.HEAPU8;
-        if (mem) return mem;
-    }
-    console.error('[sharedTerminal] Cannot find WASM heap');
-    return null;
+export async function runOnExecutor(assemblyBytes, cols, rows) {
+    await executor.run(assemblyBytes, cols, rows);
 }
 
 /**
- * Ring buffer reader/writer using WASM heap memory.
+ * Cancel the current execution (Stop button or Ctrl+C).
  */
-class HeapRingBuffer {
-    constructor(ptr, size) {
-        this.ptr = ptr;
-        this.totalSize = size;
-        this.dataSize = size - HEADER_SIZE;
-    }
-
-    getWriteIndex() {
-        const heap = getHeap();
-        if (!heap) return 0;
-        // Read uint32 little-endian
-        return heap[this.ptr] | (heap[this.ptr + 1] << 8) |
-               (heap[this.ptr + 2] << 16) | (heap[this.ptr + 3] << 24);
-    }
-
-    getReadIndex() {
-        const heap = getHeap();
-        if (!heap) return 0;
-        const offset = this.ptr + READ_INDEX_OFFSET;
-        return heap[offset] | (heap[offset + 1] << 8) |
-               (heap[offset + 2] << 16) | (heap[offset + 3] << 24);
-    }
-
-    setWriteIndex(value) {
-        const heap = getHeap();
-        if (!heap) return;
-        heap[this.ptr] = value & 0xFF;
-        heap[this.ptr + 1] = (value >> 8) & 0xFF;
-        heap[this.ptr + 2] = (value >> 16) & 0xFF;
-        heap[this.ptr + 3] = (value >> 24) & 0xFF;
-    }
-
-    setReadIndex(value) {
-        const heap = getHeap();
-        if (!heap) return;
-        const offset = this.ptr + READ_INDEX_OFFSET;
-        heap[offset] = value & 0xFF;
-        heap[offset + 1] = (value >> 8) & 0xFF;
-        heap[offset + 2] = (value >> 16) & 0xFF;
-        heap[offset + 3] = (value >> 24) & 0xFF;
-    }
-
-    incrementSignal() {
-        const heap = getHeap();
-        if (!heap) return;
-        const offset = this.ptr + SIGNAL_OFFSET;
-        let value = heap[offset] | (heap[offset + 1] << 8) |
-                    (heap[offset + 2] << 16) | (heap[offset + 3] << 24);
-        value++;
-        heap[offset] = value & 0xFF;
-        heap[offset + 1] = (value >> 8) & 0xFF;
-        heap[offset + 2] = (value >> 16) & 0xFF;
-        heap[offset + 3] = (value >> 24) & 0xFF;
-    }
-
-    available() {
-        const writeIdx = this.getWriteIndex();
-        const readIdx = this.getReadIndex();
-        if (writeIdx >= readIdx) {
-            return writeIdx - readIdx;
-        }
-        return this.dataSize - readIdx + writeIdx;
-    }
-
-    freeSpace() {
-        return this.dataSize - this.available() - 1;
-    }
-
-    write(data) {
-        if (data.length > this.freeSpace()) {
-            return false;
-        }
-
-        const heap = getHeap();
-        if (!heap) return false;
-
-        let writeIdx = this.getWriteIndex();
-        const dataStart = this.ptr + HEADER_SIZE;
-
-        for (let i = 0; i < data.length; i++) {
-            heap[dataStart + writeIdx] = data[i];
-            writeIdx = (writeIdx + 1) % this.dataSize;
-        }
-
-        this.setWriteIndex(writeIdx);
-        this.incrementSignal();
-        return true;
-    }
-
-    read(maxBytes) {
-        const avail = this.available();
-        if (avail === 0) {
-            return new Uint8Array(0);
-        }
-
-        const heap = getHeap();
-        if (!heap) return new Uint8Array(0);
-
-        const toRead = Math.min(maxBytes, avail);
-        const result = new Uint8Array(toRead);
-        let readIdx = this.getReadIndex();
-        const dataStart = this.ptr + HEADER_SIZE;
-
-        for (let i = 0; i < toRead; i++) {
-            result[i] = heap[dataStart + readIdx];
-            readIdx = (readIdx + 1) % this.dataSize;
-        }
-
-        this.setReadIndex(readIdx);
-        return result;
-    }
-
-    readString() {
-        const data = this.read(this.available());
-        if (data.length === 0) return '';
-        const decoder = new TextDecoder();
-        return decoder.decode(data);
-    }
-
-    reset() {
-        this.setWriteIndex(0);
-        this.setReadIndex(0);
-        const heap = getHeap();
-        if (heap) {
-            const offset = this.ptr + SIGNAL_OFFSET;
-            heap[offset] = 0;
-            heap[offset + 1] = 0;
-            heap[offset + 2] = 0;
-            heap[offset + 3] = 0;
-        }
-    }
+export function cancelExecution() {
+    executor.cancel();
 }
 
-// Ring buffer instances
-let outputRing = null;
-let inputRing = null;
+/**
+ * Reset execution I/O for a fresh run.
+ */
+export function resetExecution() {
+    executor.resetIO();
+}
 
 /**
  * ConsoleKey enum values (matching .NET ConsoleKey)
@@ -305,20 +131,6 @@ const ConsoleKey = {
     Y: 89, Z: 90,
     NoName: 0
 };
-
-/**
- * Register buffer pointers from C#.
- * Called by C# after allocating memory from the WASM heap.
- */
-export function registerBuffers(outPtr, outSize, inPtr, inSize) {
-    outputPtr = outPtr;
-    outputSize = outSize;
-    inputPtr = inPtr;
-    inputSize = inSize;
-
-    outputRing = new HeapRingBuffer(outputPtr, outputSize);
-    inputRing = new HeapRingBuffer(inputPtr, inputSize);
-}
 
 /**
  * Start the terminal in the specified container.
@@ -394,11 +206,11 @@ export async function startTerminal(containerId) {
     resizeObserver.observe(containerElement);
     window.addEventListener('resize', handleResize);
 
-    // Handle keyboard input - write directly to SharedArrayBuffer
+    // Handle keyboard input - write directly to the executor's input ring
     terminal.onData(data => {
-        // Handle Ctrl+C specially - request cancellation
+        // Handle Ctrl+C specially - request cancellation (pure JS, no .NET roundtrip)
         if (data === '\x03') {
-            requestCancellation();
+            executor.cancel();
             return;
         }
 
@@ -414,7 +226,7 @@ export async function startTerminal(containerId) {
         // Write regular characters
         for (const char of data) {
             const keyInfo = parseCharToKeyInfo(char);
-            writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, false, false);
+            executor.writeKeyPacket(keyInfo.key, keyInfo.char, keyInfo.shift, false, false);
         }
     });
 
@@ -425,7 +237,7 @@ export async function startTerminal(containerId) {
 
         const keyInfo = parseKeyEvent(code, e.key, domEvent);
         if (keyInfo) {
-            writeKeyInfo(keyInfo.key, keyInfo.char, keyInfo.shift, keyInfo.alt, keyInfo.ctrl);
+            executor.writeKeyPacket(keyInfo.key, keyInfo.char, keyInfo.shift, keyInfo.alt, keyInfo.ctrl);
         }
     });
 
@@ -457,8 +269,18 @@ export async function startTerminal(containerId) {
         }
     });
 
-    // Start polling for output from C#
+    // Show a notice when a stuck run had to be hard-killed.
+    executor.onHardKill(() => {
+        writeTerminal('\r\n\x1b[33mExecution stopped.\x1b[0m\r\n');
+    });
+
+    // Start polling for output from the executor
     startOutputPoll();
+
+    // Warm up the executor worker in the background so the first Run doesn't
+    // pay the runtime download + boot cost.
+    executor.ensureStarted().catch(err =>
+        console.warn('[sharedTerminal] Executor prefetch failed (will retry on first run):', err?.message));
 
     console.log('[sharedTerminal] Terminal started');
 }
@@ -545,33 +367,16 @@ function parseKeyEvent(code, key, domEvent) {
 }
 
 /**
- * Write a ConsoleKeyInfo to the input buffer.
- * Format: [keyCode: u8, keyChar: u16 (LE), modifiers: u8]
- */
-function writeKeyInfo(keyCode, keyChar, shift, alt, ctrl) {
-    if (!inputRing) {
-        return;
-    }
-
-    const data = new Uint8Array(4);
-    data[0] = keyCode & 0xFF;
-    data[1] = keyChar & 0xFF;
-    data[2] = (keyChar >> 8) & 0xFF;
-    data[3] = (shift ? 1 : 0) | (alt ? 2 : 0) | (ctrl ? 4 : 0);
-
-    inputRing.write(data);
-}
-
-/**
- * Start polling for output from C# ring buffer.
+ * Start polling for output from the executor's ring buffer.
  */
 function startOutputPoll() {
     const poll = () => {
-        if (outputRing && terminal) {
-            const data = outputRing.readString();
+        if (terminal) {
+            const data = executor.readOutput();
             if (data.length > 0) {
+                const text = outputDecoder.decode(data, { stream: true });
                 // Normalize line endings
-                const normalized = data.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+                const normalized = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
                 terminal.write(normalized);
             }
         }
@@ -599,12 +404,7 @@ export function clearTerminal() {
         terminal.clear();
         terminal.reset();
     }
-    if (outputRing) {
-        outputRing.reset();
-    }
-    if (inputRing) {
-        inputRing.reset();
-    }
+    executor.resetIO();
 }
 
 /**
@@ -617,22 +417,11 @@ export function focusTerminal() {
 }
 
 /**
- * Write a cancel key packet to the input buffer.
- * This wakes up any ReadKey waiting on the C# side.
- */
-export function writeCancelKey() {
-    if (!inputRing) return;
-    // Special cancel key packet: [keyCode=0, keyChar=0x03 (ETX), modifiers=0xFF]
-    const cancelPacket = new Uint8Array([0, 0x03, 0x00, 0xFF]);
-    inputRing.write(cancelPacket);
-}
-
-/**
- * Write directly to the terminal (for welcome animation before SharedTerminalIO is ready).
+ * Write directly to the terminal (welcome animation, host-side messages).
  */
 export function writeTerminal(text) {
     if (terminal) {
-        // Normalize line endings for xterm
+        // Normalize line endings for the terminal
         const normalized = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
         terminal.write(normalized);
     }
@@ -646,6 +435,19 @@ export function getTerminalSize() {
         return { cols: terminal.cols, rows: terminal.rows };
     }
     return { cols: 80, rows: 24 };
+}
+
+/**
+ * Get the terminal buffer as plain text (debugging / end-to-end tests).
+ */
+export function getTerminalText() {
+    if (!terminal) {
+        return '';
+    }
+    terminal.selectAll();
+    const text = terminal.getSelection();
+    terminal.clearSelection?.();
+    return text;
 }
 
 /**
@@ -663,36 +465,35 @@ export function dispose() {
         terminal.dispose();
         terminal = null;
     }
-
-    outputBuffer = null;
-    inputBuffer = null;
-    outputRing = null;
-    inputRing = null;
 }
 
 // Make functions available globally for C# JSImport
 globalThis.sharedTerminal = {
-    registerBuffers,
     startTerminal,
     stopTerminal,
     clearTerminal,
     focusTerminal,
     writeTerminal,
     getTerminalSize,
-    writeCancelKey,
+    getTerminalText,
     setExecutionRunning,
+    runOnExecutor,
+    cancelExecution,
+    resetExecution,
     dispose
 };
 
 export default {
-    registerBuffers,
     startTerminal,
     stopTerminal,
     clearTerminal,
     focusTerminal,
     writeTerminal,
     getTerminalSize,
-    writeCancelKey,
+    getTerminalText,
     setExecutionRunning,
+    runOnExecutor,
+    cancelExecution,
+    resetExecution,
     dispose
 };

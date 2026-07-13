@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/Spectre.Docs.Playground/Spectre.Docs.Playground.csproj" />
+  <Project Path="src/Spectre.Docs.Playground.Executor/Spectre.Docs.Playground.Executor.csproj" />
   <Project Path="src/Spectre.Docs.Playground.Samples/Spectre.Docs.Playground.Samples.csproj" />
   <Project Path="src/StuDev.Spectre.Console.Playground.Utilities/StuDev.Spectre.Console.Playground.Utilities.csproj" />
 </Solution>

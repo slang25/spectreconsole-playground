@@ -211,6 +211,9 @@ public class WorkspaceService
         // Add BrowserTerminal helper for Spectre.Tui support
         _workspace.AddDocument(project.Id, "BrowserTerminal.cs", SourceText.From(BrowserTerminalHelper));
 
+        // Add single-threaded execution shims (AnsiConsole/Thread shadows)
+        _workspace.AddDocument(project.Id, "PlaygroundShims.cs", SourceText.From(PlaygroundShims.Source));
+
         // Add the user's code as the main document
         var sourceText = SourceText.From(code);
         var document = _workspace.AddDocument(project.Id, "Program.cs", sourceText);
@@ -238,6 +241,11 @@ public class WorkspaceService
             parseOptions,
             path: "BrowserTerminal.cs");
 
+        var shimsSyntaxTree = CSharpSyntaxTree.ParseText(
+            PlaygroundShims.Source,
+            parseOptions,
+            path: "PlaygroundShims.cs");
+
         var codeSyntaxTree = CSharpSyntaxTree.ParseText(
             code,
             parseOptions,
@@ -245,7 +253,7 @@ public class WorkspaceService
 
         return CSharpCompilation.Create(
             $"PlaygroundAssembly_{Guid.NewGuid():N}",
-            [globalUsingsSyntaxTree, browserTerminalSyntaxTree, codeSyntaxTree],
+            [globalUsingsSyntaxTree, browserTerminalSyntaxTree, shimsSyntaxTree, codeSyntaxTree],
             _references,
             new CSharpCompilationOptions(OutputKind.ConsoleApplication)
                 .WithOptimizationLevel(OptimizationLevel.Release)

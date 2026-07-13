@@ -5,6 +5,7 @@
 
 .playwright-mcp/
 dist/
+dist-executor/
 
 # dotenv files
 .env

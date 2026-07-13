@@ -2,11 +2,11 @@ using System.Text;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
-namespace Spectre.Docs.Playground.Services;
+namespace Spectre.Docs.Playground.Executor;
 
 /// <summary>
 /// An IAnsiConsole implementation that bridges Spectre.Console with a terminal via ITerminalBridge.
-/// Uses synchronous blocking operations which are safe on background threads with WasmEnableThreads.
+/// Uses synchronous blocking operations which are safe on the executor worker thread.
 /// </summary>
 public class TerminalConsole : IAnsiConsole
 {
@@ -427,7 +427,7 @@ public class TerminalConsole : IAnsiConsole
 
         public ConsoleKeyInfo? ReadKey(bool intercept)
         {
-            // Synchronous blocking read - safe on background thread with WasmEnableThreads
+            // Synchronous blocking read - safe on the executor worker thread
             // Let OperationCanceledException propagate to stop execution
             return _bridge.ReadKey();
         }

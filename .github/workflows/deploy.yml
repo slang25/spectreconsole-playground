@@ -53,6 +53,14 @@ jobs:
       - name: Copy asset mappings for runtime resolution
         run: cp dist/Spectre.Docs.Playground.staticwebassets.endpoints.json dist/wwwroot/_framework/asset-manifest.json
 
+      - name: Publish executor runtime (user code sandbox worker)
+        run: dotnet publish src/Spectre.Docs.Playground.Executor/Spectre.Docs.Playground.Executor.csproj -c Release -o dist-executor
+
+      - name: Bundle executor runtime under /executor
+        run: |
+          mkdir -p dist/wwwroot/executor
+          cp -R dist-executor/wwwroot/_framework dist/wwwroot/executor/_framework
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

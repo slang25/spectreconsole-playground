@@ -1,108 +1,57 @@
-using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 
 namespace Spectre.Docs.Playground.Services;
 
 /// <summary>
-/// Manages terminal I/O using WASM linear memory ring buffers.
-/// This completely bypasses Blazor JS interop for terminal communication.
+/// JS interop surface for the terminal UI and executor control.
 ///
-/// The buffers are allocated from the WASM heap (via Marshal.AllocHGlobal),
-/// making them accessible from both C# and JS (via Module.HEAPU8).
+/// User-code execution happens in a dedicated Web Worker hosting its own
+/// single-threaded .NET runtime (see js/executor.js and the
+/// Spectre.Docs.Playground.Executor project). Terminal I/O flows through
+/// SharedArrayBuffer ring buffers owned entirely by JS — this app never touches
+/// them, which keeps the main runtime free of threading (and of the
+/// multithreaded-runtime interop deadlock, dotnet/runtime#106788).
 /// </summary>
-public sealed partial class SharedTerminalIO : IDisposable
+[SupportedOSPlatform("browser")]
+public sealed partial class SharedTerminalIO
 {
-    private readonly unsafe byte* _outputBufferPtr;
-    private readonly unsafe byte* _inputBufferPtr;
-    private readonly SharedRingBuffer _outputBuffer;
-    private readonly SharedRingBuffer _inputBuffer;
-    private readonly KeyInfoReader _keyReader;
-    private readonly nint _outputHandle;
-    private readonly nint _inputHandle;
-    private bool _disposed;
-
-    // Buffer sizes (including 12-byte header)
-    public const int OutputBufferSize = 64 * 1024 + 12;  // 64KB for terminal output
-    public const int InputBufferSize = 4 * 1024 + 12;    // 4KB for keyboard input
-
     private static SharedTerminalIO? _instance;
     private static bool _moduleLoaded;
-    private CancellationTokenSource? _cancellationTokenSource;
 
     /// <summary>
     /// Get the singleton instance.
     /// </summary>
     public static SharedTerminalIO? Instance => _instance;
 
-    /// <summary>
-    /// Get a cancellation token that is cancelled when Cancel() is called or Ctrl+C is pressed.
-    /// </summary>
-    public CancellationToken CancellationToken => _cancellationTokenSource?.Token ?? CancellationToken.None;
-
-    private unsafe SharedTerminalIO()
+    private SharedTerminalIO()
     {
-        // Allocate from WASM heap - this memory is accessible from JS via Module.HEAPU8
-        _outputHandle = Marshal.AllocHGlobal(OutputBufferSize);
-        _inputHandle = Marshal.AllocHGlobal(InputBufferSize);
-
-        _outputBufferPtr = (byte*)_outputHandle;
-        _inputBufferPtr = (byte*)_inputHandle;
-
-        // Zero out the memory
-        new Span<byte>(_outputBufferPtr, OutputBufferSize).Clear();
-        new Span<byte>(_inputBufferPtr, InputBufferSize).Clear();
-
-        _outputBuffer = new SharedRingBuffer(_outputBufferPtr, OutputBufferSize);
-        _inputBuffer = new SharedRingBuffer(_inputBufferPtr, InputBufferSize);
-        _keyReader = new KeyInfoReader(_inputBuffer);
-
-        // Register the buffer pointers with JS
-        JSRegisterBuffers((int)_outputHandle, OutputBufferSize, (int)_inputHandle, InputBufferSize);
-
-        // Create cancellation token source for this execution
-        _cancellationTokenSource = new CancellationTokenSource();
-
         _instance = this;
     }
 
     /// <summary>
-    /// Cancel the current execution.
-    /// Can be called from the Stop button or when Ctrl+C is pressed.
+    /// Cancel the current execution. Cooperative first; the JS side hard-kills
+    /// the worker if the run doesn't stop promptly.
     /// </summary>
     public void Cancel()
     {
-        _cancellationTokenSource?.Cancel();
-
-        // Write a special "cancel" key to the input buffer via JS to wake up any waiting ReadKey
-        // We use JS because it writes to the shared memory in a way the background thread can see
-        try
-        {
-            JSWriteCancelKey();
-        }
-        catch
-        {
-            // Ignore errors - cancellation token is already set
-        }
+        JSCancelExecution();
     }
 
     /// <summary>
-    /// Static method to cancel - called from JS when Ctrl+C is pressed.
-    /// Must be async to work with threaded WASM (can't call sync C# from JS main thread).
+    /// Reset execution I/O state for a fresh run.
     /// </summary>
-    [JSExport]
-    public static Task RequestCancellationAsync()
+    public void Reset()
     {
-        _instance?.Cancel();
-        return Task.CompletedTask;
+        JSResetExecution();
     }
 
     /// <summary>
-    /// Create a new SharedTerminalIO instance.
+    /// Create (or reuse) the terminal IO instance, loading the JS module on first use.
     /// Must be called from the main thread with JS interop access.
     /// </summary>
     public static async Task<SharedTerminalIO> CreateAsync(CancellationToken cancellationToken = default)
     {
-        // Load the JS module if not already loaded
         if (!_moduleLoaded)
         {
             try
@@ -134,63 +83,16 @@ public sealed partial class SharedTerminalIO : IDisposable
     }
 
     /// <summary>
-    /// Write text to the terminal output buffer.
-    /// Can be called from any thread - no JS interop required.
+    /// Write text directly to the terminal (host-side writes such as the welcome
+    /// animation and error messages).
     /// </summary>
     public void WriteOutput(string text)
     {
-        _outputBuffer.WriteString(text);
+        JSWriteTerminal(text);
     }
 
     /// <summary>
-    /// Write bytes to the terminal output buffer.
-    /// </summary>
-    public void WriteOutput(ReadOnlySpan<byte> data)
-    {
-        _outputBuffer.Write(data);
-    }
-
-    /// <summary>
-    /// Check if a key is available.
-    /// </summary>
-    public bool IsKeyAvailable()
-    {
-        return _keyReader.IsKeyAvailable();
-    }
-
-    /// <summary>
-    /// Read a key from the input buffer, blocking until available.
-    /// Can be called from any thread - no JS interop required.
-    /// </summary>
-    public ConsoleKeyInfo ReadKey(CancellationToken cancellationToken = default)
-    {
-        return _keyReader.ReadKey(cancellationToken);
-    }
-
-    /// <summary>
-    /// Try to read a key without blocking.
-    /// </summary>
-    public bool TryReadKey(out ConsoleKeyInfo keyInfo)
-    {
-        return _keyReader.TryReadKey(out keyInfo);
-    }
-
-    /// <summary>
-    /// Reset both buffers and create a new cancellation token.
-    /// </summary>
-    public void Reset()
-    {
-        _outputBuffer.Reset();
-        _inputBuffer.Reset();
-
-        // Create a new cancellation token source for the next execution
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = new CancellationTokenSource();
-    }
-
-    /// <summary>
-    /// Start the JS terminal with the shared buffers.
-    /// Must be called from main thread.
+    /// Start the JS terminal in the given container. Must be called from main thread.
     /// </summary>
     public static async Task StartTerminalAsync(string containerId)
     {
@@ -239,10 +141,6 @@ public sealed partial class SharedTerminalIO : IDisposable
         JSSetExecutionRunning(running);
     }
 
-    // JS interop methods - these are the ONLY JS calls needed after initialization
-    [JSImport("registerBuffers", "sharedTerminal")]
-    private static partial void JSRegisterBuffers(int outputPtr, int outputSize, int inputPtr, int inputSize);
-
     [JSImport("startTerminal", "sharedTerminal")]
     private static partial Task JSStartTerminal(string containerId);
 
@@ -258,32 +156,15 @@ public sealed partial class SharedTerminalIO : IDisposable
     [JSImport("getTerminalSize", "sharedTerminal")]
     private static partial JSObject JSGetTerminalSize();
 
-    [JSImport("writeCancelKey", "sharedTerminal")]
-    private static partial void JSWriteCancelKey();
+    [JSImport("writeTerminal", "sharedTerminal")]
+    private static partial void JSWriteTerminal(string text);
 
     [JSImport("setExecutionRunning", "sharedTerminal")]
     private static partial void JSSetExecutionRunning(bool running);
 
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
+    [JSImport("cancelExecution", "sharedTerminal")]
+    private static partial void JSCancelExecution();
 
-        _disposed = true;
-
-        StopTerminal();
-
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
-
-        _outputBuffer.Dispose();
-        _inputBuffer.Dispose();
-
-        // Free the WASM heap memory
-        Marshal.FreeHGlobal(_outputHandle);
-        Marshal.FreeHGlobal(_inputHandle);
-
-        if (_instance == this)
-            _instance = null;
-    }
+    [JSImport("resetExecution", "sharedTerminal")]
+    private static partial void JSResetExecution();
 }
