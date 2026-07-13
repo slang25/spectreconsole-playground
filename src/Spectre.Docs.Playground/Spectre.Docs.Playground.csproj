@@ -10,9 +10,16 @@
     <BlazorWebAssemblyEnableLinking>true</BlazorWebAssemblyEnableLinking>
     <!-- Disable WebCIL to output regular .dll files that Roslyn can read -->
     <WasmEnableWebcil>false</WasmEnableWebcil>
-    <!-- Enable WASM threading to allow blocking operations on background threads -->
-    <WasmEnableThreads>true</WasmEnableThreads>
+    <!-- Deliberately single-threaded: WasmEnableThreads deadlocks in JS interop
+         (dotnet/runtime#106788, ~1 in 10 page loads froze the tab). User code that
+         needs to block runs on a separate runtime in a Web Worker instead — see
+         Spectre.Docs.Playground.Executor and wwwroot/js/executor.js. -->
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The app only ever runs in the browser; informs the platform-compat analyzer. -->
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
