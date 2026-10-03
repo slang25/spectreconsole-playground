@@ -1,10 +1,10 @@
 /* Tailwind CSS v4 - Main stylesheet */
 @import "tailwindcss";
 
-/* JetBrainsMono Nerd Font for terminal */
+/* JetBrainsMono Nerd Font for terminal (self-hosted from nerd-fonts v3.4.0; jsDelivr /gh/ rejects the repo as too large) */
 @font-face {
   font-family: "JetBrainsMono NF";
-  src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@latest/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
+  src: url("../fonts/JetBrainsMonoNerdFont-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -12,7 +12,7 @@
 
 @font-face {
   font-family: "JetBrainsMono NF";
-  src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@latest/patched-fonts/JetBrainsMono/Ligatures/Bold/JetBrainsMonoNerdFont-Bold.ttf") format("truetype");
+  src: url("../fonts/JetBrainsMonoNerdFont-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -20,7 +20,7 @@
 
 @font-face {
   font-family: "JetBrainsMono NF";
-  src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@latest/patched-fonts/JetBrainsMono/Ligatures/Italic/JetBrainsMonoNerdFont-Italic.ttf") format("truetype");
+  src: url("../fonts/JetBrainsMonoNerdFont-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -28,7 +28,7 @@
 
 @font-face {
   font-family: "JetBrainsMono NF";
-  src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@latest/patched-fonts/JetBrainsMono/Ligatures/BoldItalic/JetBrainsMonoNerdFont-BoldItalic.ttf") format("truetype");
+  src: url("../fonts/JetBrainsMonoNerdFont-BoldItalic.woff2") format("woff2");
   font-weight: 700;
   font-style: italic;
   font-display: swap;

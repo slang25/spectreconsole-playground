@@ -186,8 +186,13 @@ export async function startTerminal(containerId) {
     terminal.loadAddon(fitAddon);
     terminal.open(containerElement);
 
-    // Wait for JetBrainsMono NF font to load before measuring
-    await document.fonts.load('14px "JetBrainsMono NF"');
+    // Wait for JetBrainsMono NF font to load before measuring. A font failure
+    // must not take the terminal down with it - fall back to the stack's monospace.
+    try {
+        await document.fonts.load('14px "JetBrainsMono NF"');
+    } catch (e) {
+        console.warn('[sharedTerminal] Terminal font failed to load, using fallback:', e);
+    }
     terminal.loadFonts();
 
     // Fit after a brief delay
